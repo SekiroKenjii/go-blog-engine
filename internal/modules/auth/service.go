@@ -60,10 +60,13 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest, deviceID, ip,
 		return nil, response.EBIZ001001
 	}
 
-	_ = s.Store.DeleteRefreshTokenByDevice(ctx, dbCtx.DeleteRefreshTokenByDeviceParams{
+	err = s.Store.DeleteRefreshTokenByDevice(ctx, dbCtx.DeleteRefreshTokenByDeviceParams{
 		UserID:   user.ID,
 		DeviceID: deviceID,
 	})
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to delete refresh token for user %s on device %s: %v", user.ID, deviceID, err))
+	}
 
 	token, err := s.TokenManager.GenerateTokenPair(user.ID)
 	if err != nil {
