@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -35,8 +36,23 @@ func (q *Queries) DeleteRefreshToken(ctx context.Context, arg DeleteRefreshToken
 	return err
 }
 
+const deleteRefreshTokenByDevice = `-- name: DeleteRefreshTokenByDevice :exec
+DELETE FROM refresh_tokens
+WHERE user_id = $1 AND device_id = $2
+`
+
+type DeleteRefreshTokenByDeviceParams struct {
+	UserID   string `json:"user_id"`
+	DeviceID string `json:"device_id"`
+}
+
+func (q *Queries) DeleteRefreshTokenByDevice(ctx context.Context, arg DeleteRefreshTokenByDeviceParams) error {
+	_, err := q.db.ExecContext(ctx, deleteRefreshTokenByDevice, arg.UserID, arg.DeviceID)
+	return err
+}
+
 const getRefreshToken = `-- name: GetRefreshToken :one
-SELECT id, user_id, token_hash, expires_at, created_at FROM refresh_tokens
+SELECT id, user_id, token_hash, expires_at, created_at, device_id, ip, user_agent FROM refresh_tokens
 WHERE user_id = $1 AND token_hash = $2
 `
 
@@ -54,22 +70,35 @@ func (q *Queries) GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams
 		&i.TokenHash,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.DeviceID,
+		&i.Ip,
+		&i.UserAgent,
 	)
 	return i, err
 }
 
 const storeRefreshToken = `-- name: StoreRefreshToken :exec
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-VALUES ($1, $2, $3)
+INSERT INTO refresh_tokens (user_id, token_hash, device_id, ip, user_agent, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type StoreRefreshTokenParams struct {
-	UserID    string    `json:"user_id"`
-	TokenHash string    `json:"token_hash"`
-	ExpiresAt time.Time `json:"expires_at"`
+	UserID    string         `json:"user_id"`
+	TokenHash string         `json:"token_hash"`
+	DeviceID  string         `json:"device_id"`
+	Ip        sql.NullString `json:"ip"`
+	UserAgent sql.NullString `json:"user_agent"`
+	ExpiresAt time.Time      `json:"expires_at"`
 }
 
 func (q *Queries) StoreRefreshToken(ctx context.Context, arg StoreRefreshTokenParams) error {
-	_, err := q.db.ExecContext(ctx, storeRefreshToken, arg.UserID, arg.TokenHash, arg.ExpiresAt)
+	_, err := q.db.ExecContext(ctx, storeRefreshToken,
+		arg.UserID,
+		arg.TokenHash,
+		arg.DeviceID,
+		arg.Ip,
+		arg.UserAgent,
+		arg.ExpiresAt,
+	)
 	return err
 }

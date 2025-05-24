@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"time"
 
 	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
@@ -24,9 +25,9 @@ type IAuthHandler interface {
 }
 
 type IAuthService interface {
-	Register(*gin.Context, RegisterRequest) response.ErrorCode
-	Login(*gin.Context, LoginRequest) (*TokenPair, response.ErrorCode)
-	RefreshToken(*gin.Context, string, string) (*TokenPair, response.ErrorCode)
+	Register(context.Context, RegisterRequest) response.ErrorCode
+	Login(context.Context, LoginRequest, string, string, string) (*TokenPair, response.ErrorCode)
+	RefreshToken(context.Context, string, string) (*TokenPair, response.ErrorCode)
 }
 
 type ITokenManager interface {

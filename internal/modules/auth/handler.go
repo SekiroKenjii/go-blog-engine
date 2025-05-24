@@ -82,7 +82,9 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	tokenPair, bizErrCode := h.Service.Login(c, req)
+	deviceID, ip, ua := accessor.GetDeviceInfo(c)
+
+	tokenPair, bizErrCode := h.Service.Login(c, req, deviceID, ip, ua)
 	if bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
 
