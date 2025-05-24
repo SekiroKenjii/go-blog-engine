@@ -65,7 +65,7 @@ make server
 ```
 
 ### Documentation
-- [Architecture Documentation](ARCHITECTURE.md)
+- [Architecture Documentation](ARCHITECTURE.MD)
 
 ### API Documentation
 API documentation is available at /docs/swagger/index.html or /docs/scalar when running the server.
