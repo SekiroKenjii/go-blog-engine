@@ -24,6 +24,8 @@ Go Blog Engine is a lightweight, scalable blog platform designed for speed and s
 - Go 1.20 or higher
 - PostgreSQL (or your preferred database)
 - Redis (optional, for caching)
+- [yq](https://mikefarah.gitbook.io/yq/) - portable command-line YAML, JSON, XML, CSV, TOML and properties processor
+- [goose](http://pressly.github.io/goose/) - a database migration tool
 
 ### Getting Started
 
