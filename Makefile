@@ -2,7 +2,7 @@
 
 # Define environment variables
 ENV = develop
-CONFIG_FILE_DIR = ./config/env/$(ENV).yml
+CONFIG_FILE_PATH = ./config/env/$(ENV).yml
 DB_DRIVER = postgres
 MAIN_DIR = ./cmd/server
 DOC_DIR = ./docs
@@ -12,7 +12,7 @@ SQL_QUERY_DIR = $(SQLC_DIR)/queries
 
 # Define common functions
 define read_db_conf
-	$(shell yq '.$(DB_DRIVER).$(1)' $(CONFIG_FILE_DIR))
+	$(shell yq '.$(DB_DRIVER).$(1)' $(CONFIG_FILE_PATH))
 endef
 
 # Goose environment variables
