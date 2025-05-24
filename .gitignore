@@ -1,0 +1,70 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Binary output directories
+bin/
+dist/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment files
+.env
+.env.develop
+.env.stg
+.env.prod
+
+# Gin debug files
+gin-bin
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
+# Configuration files that might contain sensitive info
+develop.yaml
+develop.yml
+docker.yaml
+docker.yml
+prod.yaml
+prod.yml
+stg.yaml
+stg.yaml
+
+# Generated Swagger files (if using swag or similar)
+swagger.json
+swagger.yaml
+swagger.yml
+
+# Database files (if using SQLite or other file-based DBs)
+*.db
+
+# Docker files
+docker-compose.yml
+docker-compose.yaml
+docker-compose-db.yml
+docker-compose-db.yaml

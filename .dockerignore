@@ -1,0 +1,44 @@
+# Binaries and object files
+*.o
+*.a
+*.so
+*.exe
+*.test
+*.prof
+
+# Go specific
+/bin/
+/vendor/
+*.log
+
+# Project specific
+.env
+.env.*
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+*.md
+*.yml
+*.yaml
+!docker-compose.yml
+!docker-compose.yaml
+!docker-compose-db.yml
+!docker-compose-db.yaml
+
+# Docker specific
+Dockerfile
+Dockerfile.*
+.dockerignore
+
+# Test files
+*_test.go
+coverage.txt
+coverage.html
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~

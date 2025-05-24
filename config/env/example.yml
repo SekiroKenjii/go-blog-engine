@@ -1,0 +1,40 @@
+server:
+  host:
+  port:
+log:
+  level:
+  file_name:
+  max_file_size:
+  max_backups:
+  max_age:
+  is_compressed: true
+postgres:
+  host:
+  port:
+  name:
+  user:
+  password:
+  max_open_conns:
+  max_idle_conns:
+  conn_max_lifetime:
+security:
+  cors:
+    allow_origins:
+    allow_methods:
+    allow_headers:
+    expose_headers:
+    allow_credentials:
+    max_age:
+  jwt:
+    secret_key:
+    refresh_key:
+redis:
+  host:
+  port:
+  user:
+  password:
+rabitmq:
+  host:
+  port:
+  user:
+  password:
