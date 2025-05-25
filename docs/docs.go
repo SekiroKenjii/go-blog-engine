@@ -122,7 +122,13 @@ const docTemplate = `{
                 "accessToken": {
                     "type": "string"
                 },
+                "accessTokenExpires": {
+                    "type": "string"
+                },
                 "refreshToken": {
+                    "type": "string"
+                },
+                "refreshTokenExpires": {
                     "type": "string"
                 }
             }

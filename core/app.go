@@ -10,23 +10,28 @@ import (
 
 	"github.com/SekiroKenjii/go-blog-engine/config"
 	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
+	"github.com/SekiroKenjii/go-blog-engine/internal/cache"
 	"github.com/SekiroKenjii/go-blog-engine/internal/router"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/logger"
+	"github.com/redis/go-redis/v9"
 )
 
 type Application struct {
 	Config *config.Config
+	Redis  *redis.Client
 	Router abstract.IRouter
 }
 
 func Bootstrap() *Application {
 	cfg := config.Instance()
+	redis := cache.RedisInstance()
 	router := router.Instance()
 
 	logger.Info("Application startup complete.")
 
 	return &Application{
 		Config: cfg,
+		Redis:  redis,
 		Router: router,
 	}
 }

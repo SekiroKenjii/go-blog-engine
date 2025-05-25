@@ -48,8 +48,6 @@ temp/
 # Configuration files that might contain sensitive info
 develop.yaml
 develop.yml
-docker.yaml
-docker.yml
 prod.yaml
 prod.yml
 stg.yaml
@@ -66,5 +64,8 @@ swagger.yml
 # Docker files
 docker-compose.yml
 docker-compose.yaml
-docker-compose-db.yml
-docker-compose-db.yaml
+docker-compose-redis.yml
+docker-compose-redis.yaml
+
+# Redis files
+redis-sentinel.conf

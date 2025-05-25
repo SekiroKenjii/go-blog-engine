@@ -48,10 +48,11 @@ type SecurityConfig struct {
 }
 
 type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
+	Host          string `mapstructure:"host"`
+	SentinelPorts string `mapstructure:"sentinel_ports"`
+	Database      int    `mapstructure:"database"`
+	MasterName    string `mapstructure:"master_name"`
+	Password      string `mapstructure:"password"`
 }
 
 type RabbitMQConfig struct {

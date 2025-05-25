@@ -44,36 +44,36 @@ migrate-reset:
 # Docker commands
 .PHONY: docker-up
 docker-up:
-	@docker compose --file 'environments/docker/docker-compose$(filter-out $@,$(MAKECMDGOALS)).yml' up -d
+	@docker compose --file environments/docker/docker-compose.yml up -d
 
 .PHONY: docker-build
 docker-build:
-	@docker compose --file 'environments/docker/docker-compose$(filter-out $@,$(MAKECMDGOALS)).yml' up --build -d
+	@docker compose --file environments/docker/docker-compose.yml up --build -d
 
 .PHONY: docker-down
 docker-down:
-	@docker compose --file 'environments/docker/docker-compose$(filter-out $@,$(MAKECMDGOALS)).yml' down --volumes
+	@docker compose --file environments/docker/docker-compose.yml down --volumes
 
 .PHONY: docker-stop
 docker-stop:
-	@docker compose --file 'environments/docker/docker-compose$(filter-out $@,$(MAKECMDGOALS)).yml' --project-name 'go-blog-engine' stop
+	@docker compose --file environments/docker/docker-compose.yml --project-name 'go-blog-engine' stop
 
 .PHONY: docker-start
 docker-start:
-	@docker compose --file 'environments/docker/docker-compose$(filter-out $@,$(MAKECMDGOALS)).yml' --project-name 'go-blog-engine' start
+	@docker compose --file environments/docker/docker-compose.yml --project-name 'go-blog-engine' start
 
 # Go commands
 .PHONY: server
 server:
-	@go run ./cmd/server/*.go $(filter-out $@,$(MAKECMDGOALS))
+	@go run ./cmd/server/*.go $(env)
 
-.PHONY: swagger-init
-swagger-init:
-	@swag init -d $(MAIN_DIR) $(filter-out $@,$(MAKECMDGOALS))
+.PHONY: swag-init
+swag-init:
+	@swag init -d $(MAIN_DIR) $(g)
 
-.PHONY: swagger-gen
-swagger-gen:
-	@swag init -d $(filter-out $@,$(MAKECMDGOALS)) -g handler.go -o $(DOC_DIR) --parseDependency
+.PHONY: swag-gen
+swag-gen:
+	@swag init -d $(dir) -g handler.go -o $(DOC_DIR) --parseDependency
 
 .PHONY: sqlc-gen
 sqlc-gen:

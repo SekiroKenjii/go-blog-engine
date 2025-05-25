@@ -30,10 +30,10 @@ security:
     refresh_key:
 redis:
   host:
-  port:
-  user:
+  sentinel_ports:
+  database:
   password:
-rabitmq:
+rabbitmq:
   host:
   port:
   user:

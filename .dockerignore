@@ -26,6 +26,8 @@
 !docker-compose.yaml
 !docker-compose-db.yml
 !docker-compose-db.yaml
+!docker-compose-redis.yml
+!docker-compose-redis.yaml
 
 # Docker specific
 Dockerfile
