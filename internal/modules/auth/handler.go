@@ -54,7 +54,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if bizErrCode := h.Service.Register(c, req); bizErrCode != response.SBIZ000001 {
+	if bizErrCode := h.Service.Register(c.Request.Context(), req); bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
 
 		return
@@ -82,7 +82,9 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	tokenPair, bizErrCode := h.Service.Login(c, req)
+	deviceID, ip, ua := accessor.GetDeviceInfo(c)
+
+	tokenPair, bizErrCode := h.Service.Login(c.Request.Context(), req, deviceID, ip, ua)
 	if bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
 
@@ -127,7 +129,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		return
 	}
 
-	tokenPair, bizErrCode := h.Service.RefreshToken(c, userID, req.RefreshToken)
+	tokenPair, bizErrCode := h.Service.RefreshToken(c.Request.Context(), userID, req.RefreshToken)
 	if bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode, http.StatusUnauthorized)
 

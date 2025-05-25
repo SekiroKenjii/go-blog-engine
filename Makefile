@@ -25,8 +25,8 @@ GOOSE_DB_NAME = $(firstword $(subst :, ,$(call read_db_conf,name)))
 GOOSE_DBSTRING = $(DB_DRIVER)://$(GOOSE_DB_USER):$(GOOSE_DB_PASSWORD)@$(GOOSE_DB_HOST):$(GOOSE_DB_PORT)/$(GOOSE_DB_NAME)
 
 # Goose migration commands
-.PHONY: migration
-migration-create:
+.PHONY: migrate-create
+migrate-create:
 	@goose create -dir $(SQL_SCHEMA_DIR) $(filter-out $@,$(MAKECMDGOALS)) sql
 
 .PHONY: migrate-up

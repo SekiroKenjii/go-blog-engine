@@ -22,11 +22,14 @@ type Post struct {
 }
 
 type RefreshToken struct {
-	ID        int32        `json:"id"`
-	UserID    string       `json:"user_id"`
-	TokenHash string       `json:"token_hash"`
-	ExpiresAt time.Time    `json:"expires_at"`
-	CreatedAt sql.NullTime `json:"created_at"`
+	ID        int32          `json:"id"`
+	UserID    string         `json:"user_id"`
+	TokenHash string         `json:"token_hash"`
+	ExpiresAt time.Time      `json:"expires_at"`
+	CreatedAt sql.NullTime   `json:"created_at"`
+	DeviceID  string         `json:"device_id"`
+	Ip        sql.NullString `json:"ip"`
+	UserAgent sql.NullString `json:"user_agent"`
 }
 
 type User struct {

@@ -13,6 +13,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteAllRefreshTokensForUser(ctx context.Context, userID string) error
 	DeleteRefreshToken(ctx context.Context, arg DeleteRefreshTokenParams) error
+	DeleteRefreshTokenByDevice(ctx context.Context, arg DeleteRefreshTokenByDeviceParams) error
 	GetPostByID(ctx context.Context, id string) (Post, error)
 	GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams) (RefreshToken, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)

@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -8,7 +10,6 @@ import (
 	"github.com/SekiroKenjii/go-blog-engine/internal/utils"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/logger"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
-	"github.com/gin-gonic/gin"
 
 	dbCtx "github.com/SekiroKenjii/go-blog-engine/internal/db/sqlc/gen"
 )
@@ -25,7 +26,7 @@ func NewService() IAuthService {
 	}
 }
 
-func (s *AuthService) Register(ctx *gin.Context, req RegisterRequest) response.ErrorCode {
+func (s *AuthService) Register(ctx context.Context, req RegisterRequest) response.ErrorCode {
 	hashedPwd, err := utils.HashPassword(req.Password)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error occurred during a cryptographic operation: %v", err))
@@ -49,7 +50,7 @@ func (s *AuthService) Register(ctx *gin.Context, req RegisterRequest) response.E
 	return response.SBIZ000001
 }
 
-func (s *AuthService) Login(ctx *gin.Context, req LoginRequest) (*TokenPair, response.ErrorCode) {
+func (s *AuthService) Login(ctx context.Context, req LoginRequest, deviceID, ip, ua string) (*TokenPair, response.ErrorCode) {
 	user, err := s.Store.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, response.EBIZ001000
@@ -57,6 +58,14 @@ func (s *AuthService) Login(ctx *gin.Context, req LoginRequest) (*TokenPair, res
 
 	if !utils.CheckPasswordHash(req.Password, user.PasswordHash) {
 		return nil, response.EBIZ001001
+	}
+
+	err = s.Store.DeleteRefreshTokenByDevice(ctx, dbCtx.DeleteRefreshTokenByDeviceParams{
+		UserID:   user.ID,
+		DeviceID: deviceID,
+	})
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to delete refresh token for user %s on device %s: %v", user.ID, deviceID, err))
 	}
 
 	token, err := s.TokenManager.GenerateTokenPair(user.ID)
@@ -71,6 +80,9 @@ func (s *AuthService) Login(ctx *gin.Context, req LoginRequest) (*TokenPair, res
 	err = s.Store.StoreRefreshToken(ctx, dbCtx.StoreRefreshTokenParams{
 		UserID:    user.ID,
 		TokenHash: tokenHash,
+		DeviceID:  deviceID,
+		Ip:        sql.NullString{String: ip, Valid: ip != ""},
+		UserAgent: sql.NullString{String: ua, Valid: ua != ""},
 		ExpiresAt: token.RefreshTokenExpires,
 	})
 	if err != nil {
@@ -82,7 +94,7 @@ func (s *AuthService) Login(ctx *gin.Context, req LoginRequest) (*TokenPair, res
 	return token, response.SBIZ000001
 }
 
-func (s *AuthService) RefreshToken(ctx *gin.Context, UserID string, refreshToken string) (*TokenPair, response.ErrorCode) {
+func (s *AuthService) RefreshToken(ctx context.Context, UserID string, refreshToken string) (*TokenPair, response.ErrorCode) {
 	dbToken, err := s.Store.GetRefreshToken(ctx, dbCtx.GetRefreshTokenParams{
 		UserID:    UserID,
 		TokenHash: utils.HashSHA256(refreshToken),
