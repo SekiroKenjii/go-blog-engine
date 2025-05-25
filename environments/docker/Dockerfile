@@ -17,4 +17,4 @@ RUN go build -o main ./cmd/server
 EXPOSE 8080
 
 # Run the server
-CMD ["./main", "docker"]
+CMD ["./main"]

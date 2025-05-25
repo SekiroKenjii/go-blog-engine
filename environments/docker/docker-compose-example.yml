@@ -1,18 +1,103 @@
+# This is an example of a Docker Compose file for the project.
+
 services:
+# region: PostgreSQL
   blog-engine-db:
     image: postgres:17.4
     container_name: blog-engine-db
     restart: always
     environment:
-      POSTGRES_DB: blog_engine_db
-      POSTGRES_USER:
-      POSTGRES_PASSWORD:
+      POSTGRES_DB: YOUR_POSTGRES_DB_NAME_HERE
+      POSTGRES_USER: YOUR_POSTGRES_USER_HERE
+      POSTGRES_PASSWORD: YOUR_POSTGRES_PASSWORD_HERE
     volumes:
       - db_data:/var/lib/postgresql/data
       - ../../internal/db/migrations/20250515_000001_init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - blog_engine_network
     ports:
       - "5432:5432"
+# endregion
 
+# region: Redis
+  blog-engine-redis-master:
+    image: redis:latest
+    container_name: blog-engine-redis-master
+    command: ["sh", "-c", "redis-server --protected-mode no --slave-announce-ip blog-engine-redis-master --slave-announce-port 6379 --requirepass YOUR_REDIS_PASSWORD_HERE"]
+    networks:
+      - blog_engine_network
+    ports:
+      - "6379:6379"
+
+  blog-engine-redis-slave1:
+    image: redis:latest
+    container_name: blog-engine-redis-slave1
+    command: ["sh", "-c", "redis-server --slaveof blog-engine-redis-master 6379 --masterauth YOUR_REDIS_PASSWORD_HERE --requirepass YOUR_REDIS_PASSWORD_HERE --protected-mode no --slave-announce-ip blog-engine-redis-slave1 --slave-announce-port 6380"]
+    networks:
+      - blog_engine_network
+    ports:
+      - "6380:6379"
+    depends_on:
+      - blog-engine-redis-master
+
+  blog-engine-redis-slave2:
+    image: redis:latest
+    container_name: blog-engine-redis-slave2
+    command: ["sh", "-c", "redis-server --slaveof blog-engine-redis-master 6379 --masterauth YOUR_REDIS_PASSWORD_HERE --requirepass YOUR_REDIS_PASSWORD_HERE --protected-mode no --slave-announce-ip blog-engine-redis-slave2 --slave-announce-port 6381"]
+    networks:
+      - blog_engine_network
+    ports:
+      - "6381:6379"
+    depends_on:
+      - blog-engine-redis-master
+
+  blog-engine-redis-sentinel1:
+    image: redis:latest
+    container_name: blog-engine-redis-sentinel1
+    depends_on:
+      - blog-engine-redis-master
+      - blog-engine-redis-slave1
+      - blog-engine-redis-slave2
+    command: redis-sentinel /etc/redis-sentinel.conf --sentinel
+    volumes:
+      - ./redis-sentinel.conf:/etc/redis-sentinel.conf
+    networks:
+      - blog_engine_network
+    ports:
+      - "26379:26379"
+
+  blog-engine-redis-sentinel2:
+    image: redis:latest
+    container_name: blog-engine-redis-sentinel2
+    depends_on:
+      - blog-engine-redis-master
+      - blog-engine-redis-slave1
+      - blog-engine-redis-slave2
+    command: redis-sentinel /etc/redis-sentinel.conf --sentinel
+    volumes:
+      - ./redis-sentinel.conf:/etc/redis-sentinel.conf
+    networks:
+      - blog_engine_network
+    ports:
+      - "26380:26379"
+
+  blog-engine-redis-sentinel3:
+    image: redis:latest
+    container_name: blog-engine-redis-sentinel3
+    depends_on:
+      - blog-engine-redis-master
+      - blog-engine-redis-slave1
+      - blog-engine-redis-slave2
+    command: redis-sentinel /etc/redis-sentinel.conf --sentinel
+    volumes:
+      - ./redis-sentinel.conf:/etc/redis-sentinel.conf
+    networks:
+      - blog_engine_network
+    ports:
+      - "26381:26379"
+# endregion
+
+# region: API
   blog-engine-api:
     build:
       context: ../../
@@ -21,8 +106,22 @@ services:
     restart: always
     depends_on:
       - blog-engine-db
+      - blog-engine-redis-master
+      - blog-engine-redis-slave1
+      - blog-engine-redis-slave2
+      - blog-engine-redis-sentinel1
+      - blog-engine-redis-sentinel2
+      - blog-engine-redis-sentinel3
+    networks:
+      - blog_engine_network
     ports:
       - "8080:8080"
+# endregion
 
 volumes:
   db_data:
+
+networks:
+  blog_engine_network:
+    driver: bridge
+    external: true

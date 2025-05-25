@@ -7,7 +7,7 @@ log:
   max_file_size:
   max_backups:
   max_age:
-  is_compressed: true
+  is_compressed:
 postgres:
   host:
   port:
@@ -30,10 +30,11 @@ security:
     refresh_key:
 redis:
   host:
-  port:
-  user:
+  sentinel_ports:
+  database:
+  master_name:
   password:
-rabitmq:
+rabbitmq:
   host:
   port:
   user:
