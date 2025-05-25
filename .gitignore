@@ -64,8 +64,6 @@ swagger.yml
 # Docker files
 docker-compose.yml
 docker-compose.yaml
-docker-compose-redis.yml
-docker-compose-redis.yaml
 
 # Redis files
 redis-sentinel.conf

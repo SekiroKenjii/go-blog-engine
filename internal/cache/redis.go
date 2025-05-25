@@ -57,13 +57,13 @@ func newRedisClient() *redis.Client {
 	// Check the connection
 	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
-		logger.Fatal("Failed to connect to Redis Sentinel: %v", zap.Any("error", err))
+		logger.Fatal("Failed to connect to Redis Sentinel", zap.Error(err))
 	}
 
 	// Set a test key to verify the connection
 	err = rdb.Set(ctx, "test_key", "Redis Sentinel Instance!", 0).Err()
 	if err != nil {
-		logger.Fatal("Error setting key: %v", zap.Any("error", err))
+		logger.Fatal("Error setting key", zap.Error(err))
 	}
 
 	logger.Info("Initializing RedisSentinel Successfully")
