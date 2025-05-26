@@ -2,7 +2,6 @@ package auth
 
 import (
 	"net/http"
-	"sync"
 
 	"github.com/SekiroKenjii/go-blog-engine/pkg/accessor"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
@@ -12,21 +11,12 @@ import (
 	_ "github.com/SekiroKenjii/go-blog-engine/docs"
 )
 
-var (
-	handler     IAuthHandler
-	handlerOnce sync.Once
-)
-
 type Handler struct {
-	Service IAuthService
+	service IAuthService
 }
 
-func Instance() IAuthHandler {
-	handlerOnce.Do(func() {
-		handler = &Handler{Service: NewService()}
-	})
-
-	return handler
+func NewAuthHandler() IAuthHandler {
+	return &Handler{service: NewAuthService()}
 }
 
 func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
@@ -54,7 +44,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if bizErrCode := h.Service.Register(c.Request.Context(), req); bizErrCode != response.SBIZ000001 {
+	if bizErrCode := h.service.Register(c.Request.Context(), req); bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
 
 		return
@@ -84,7 +74,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	deviceID, ip, ua := accessor.GetDeviceInfo(c)
 
-	tokenPair, bizErrCode := h.Service.Login(c.Request.Context(), req, deviceID, ip, ua)
+	tokenPair, bizErrCode := h.service.Login(c.Request.Context(), req, deviceID, ip, ua)
 	if bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
 
@@ -129,7 +119,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		return
 	}
 
-	tokenPair, bizErrCode := h.Service.RefreshToken(c.Request.Context(), userID, req.RefreshToken)
+	tokenPair, bizErrCode := h.service.RefreshToken(c.Request.Context(), userID, req.RefreshToken)
 	if bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode, http.StatusUnauthorized)
 

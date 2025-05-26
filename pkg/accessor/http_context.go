@@ -1,7 +1,7 @@
 package accessor
 
 import (
-	"github.com/SekiroKenjii/go-blog-engine/internal/utils"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 

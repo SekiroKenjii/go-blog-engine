@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/jwt"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
 	"github.com/gin-gonic/gin"
 )
@@ -34,6 +35,5 @@ type ITokenManager interface {
 	GenerateTokenPair(string) (*TokenPair, error)
 	GenerateAccessToken(string) (string, time.Time, error)
 	GenerateRefreshToken(int) (string, time.Time, error)
-	ValidateAccessToken(string) (*CustomClaims, error)
-	ValidateRefreshToken(string) (*CustomClaims, error)
+	ValidateAccessToken(string) (*jwt.CustomClaims, error)
 }

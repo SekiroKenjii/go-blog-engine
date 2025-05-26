@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SekiroKenjii/go-blog-engine/internal/utils"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/utils"
 )
 
 func safeJSONConfiguration(options *Options) string {

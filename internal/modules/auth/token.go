@@ -7,18 +7,19 @@ import (
 	"time"
 
 	"github.com/SekiroKenjii/go-blog-engine/config"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/jwt"
 )
 
 var (
-	tokenMgr     ITokenManager
-	tokenMgrOnce sync.Once
+	instance ITokenManager
+	once     sync.Once
 )
 
 type TokenManager struct {
-	AccessTTL  time.Duration
-	RefreshTTL time.Duration
-	SecretKey  []byte
-	RefreshKey []byte
+	accessTTL  time.Duration
+	refreshTTL time.Duration
+	secretKey  []byte
+	refreshKey []byte
 }
 
 type TokenPair struct {
@@ -29,21 +30,21 @@ type TokenPair struct {
 }
 
 func TokenManagerInstance() ITokenManager {
-	tokenMgrOnce.Do(func() {
-		tokenMgr = newTokenManager()
+	once.Do(func() {
+		instance = newTokenManager()
 	})
 
-	return tokenMgr
+	return instance
 }
 
 func newTokenManager() *TokenManager {
 	jwtConf := config.Instance().Security.Jwt
 
 	return &TokenManager{
-		AccessTTL:  15 * time.Minute,
-		RefreshTTL: 24 * 7 * time.Hour,
-		SecretKey:  []byte(jwtConf.SecretKey),
-		RefreshKey: []byte(jwtConf.RefreshKey),
+		accessTTL:  15 * time.Minute,
+		refreshTTL: 24 * 7 * time.Hour,
+		secretKey:  []byte(jwtConf.SecretKey),
+		refreshKey: []byte(jwtConf.RefreshKey),
 	}
 }
 
@@ -67,14 +68,14 @@ func (tm *TokenManager) GenerateTokenPair(userID string) (*TokenPair, error) {
 }
 
 func (tm *TokenManager) GenerateAccessToken(userID string) (string, time.Time, error) {
-	expires := time.Now().Add(tm.AccessTTL)
-	token, err := generateToken(userID, expires, AccessToken, tm.SecretKey)
+	expires := time.Now().Add(tm.accessTTL)
+	token, err := jwt.GenerateToken(userID, expires, jwt.AccessToken, tm.secretKey)
 
 	return token, expires, err
 }
 
 func (tm *TokenManager) GenerateRefreshToken(length int) (string, time.Time, error) {
-	expires := time.Now().Add(tm.RefreshTTL)
+	expires := time.Now().Add(tm.refreshTTL)
 	bytes := make([]byte, length)
 	_, err := rand.Read(bytes)
 	if err != nil {
@@ -86,10 +87,6 @@ func (tm *TokenManager) GenerateRefreshToken(length int) (string, time.Time, err
 	return token, expires, err
 }
 
-func (tm *TokenManager) ValidateAccessToken(token string) (*CustomClaims, error) {
-	return ParseToken(token, tm.SecretKey)
-}
-
-func (tm *TokenManager) ValidateRefreshToken(token string) (*CustomClaims, error) {
-	return ParseToken(token, tm.RefreshKey)
+func (tm *TokenManager) ValidateAccessToken(token string) (*jwt.CustomClaims, error) {
+	return jwt.ParseToken(token, tm.secretKey)
 }
