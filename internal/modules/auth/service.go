@@ -110,7 +110,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, UserID string, refreshTo
 
 		_ = s.repo.DeleteRefreshToken(ctx, dbCtx.DeleteRefreshTokenParams{
 			UserID:    UserID,
-			TokenHash: refreshToken,
+			TokenHash: dbToken.TokenHash,
 		})
 
 		return nil, response.EBIZ001004
