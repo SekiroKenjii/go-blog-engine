@@ -2,7 +2,6 @@ package router
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/SekiroKenjii/go-blog-engine/config"
 	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
@@ -14,31 +13,18 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var (
-	instance *Router
-	once     sync.Once
-)
-
 type Router struct {
-	Engine *gin.Engine
+	engine *gin.Engine
 }
 
-func Instance() abstract.IRouter {
-	once.Do(func() {
-		instance = newRouter()
-	})
-
-	return instance
-}
-
-func newRouter() *Router {
+func NewRouter() abstract.IRouter {
 	env := config.Instance().Server.Env
 	if env == "develop" {
 		gin.SetMode(gin.DebugMode)
 		gin.ForceConsoleColor()
 
 		return &Router{
-			Engine: gin.Default(),
+			engine: gin.Default(),
 		}
 	}
 
@@ -47,7 +33,7 @@ func newRouter() *Router {
 	r.Use(gin.Recovery())
 
 	return &Router{
-		Engine: r,
+		engine: r,
 	}
 }
 
@@ -57,21 +43,21 @@ func (r *Router) SetupRoutes() {
 	r.addAPIRoutes()
 }
 
-func (r *Router) GetEngine() *gin.Engine {
-	return r.Engine
+func (r *Router) Engine() *gin.Engine {
+	return r.engine
 }
 
 func (r *Router) addMiddlewares() {
-	r.Engine.Use(middlewares.ErrorHandler())
-	r.Engine.Use(middlewares.Cors())
-	r.Engine.Use(middlewares.RateLimit())
-	r.Engine.Use(middlewares.Auth())
+	r.engine.Use(middlewares.ErrorHandler())
+	r.engine.Use(middlewares.Cors())
+	r.engine.Use(middlewares.RateLimit())
+	r.engine.Use(middlewares.Auth())
 }
 
 func (r *Router) addOpenAPI() {
-	r.Engine.GET("/docs/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.engine.GET("/docs/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	r.Engine.GET("/docs/scalar", func(c *gin.Context) {
+	r.engine.GET("/docs/scalar", func(c *gin.Context) {
 		htmlContent, err := scalar.ApiReferenceHTML(&scalar.Options{
 			SpecURL: "./docs/swagger.json",
 			CustomOptions: scalar.CustomOptions{

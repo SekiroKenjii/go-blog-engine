@@ -1,31 +1,32 @@
 package auth
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/SekiroKenjii/go-blog-engine/internal/db/sqlc"
-	"github.com/SekiroKenjii/go-blog-engine/internal/utils"
+	"github.com/SekiroKenjii/go-blog-engine/internal/db"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/logger"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
-	"github.com/gin-gonic/gin"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/utils"
 
 	dbCtx "github.com/SekiroKenjii/go-blog-engine/internal/db/sqlc/gen"
 )
 
 type AuthService struct {
-	Store        *sqlc.Store
-	TokenManager ITokenManager
+	repo     *db.Repository
+	tokenMgr ITokenManager
 }
 
-func NewService() IAuthService {
+func NewAuthService() IAuthService {
 	return &AuthService{
-		Store:        sqlc.Instance(),
-		TokenManager: TokenManagerInstance(),
+		repo:     db.RepositoryInstance(),
+		tokenMgr: TokenManagerInstance(),
 	}
 }
 
-func (s *AuthService) Register(ctx *gin.Context, req RegisterRequest) response.ErrorCode {
+func (s *AuthService) Register(ctx context.Context, req RegisterRequest) response.ErrorCode {
 	hashedPwd, err := utils.HashPassword(req.Password)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error occurred during a cryptographic operation: %v", err))
@@ -33,7 +34,7 @@ func (s *AuthService) Register(ctx *gin.Context, req RegisterRequest) response.E
 		return response.FATA000101
 	}
 
-	_, err = s.Store.CreateUser(ctx, dbCtx.CreateUserParams{
+	_, err = s.repo.CreateUser(ctx, dbCtx.CreateUserParams{
 		ID:           utils.GenerateULID(nil),
 		Email:        req.Email,
 		FirstName:    req.FirstName,
@@ -49,8 +50,8 @@ func (s *AuthService) Register(ctx *gin.Context, req RegisterRequest) response.E
 	return response.SBIZ000001
 }
 
-func (s *AuthService) Login(ctx *gin.Context, req LoginRequest) (*TokenPair, response.ErrorCode) {
-	user, err := s.Store.GetUserByEmail(ctx, req.Email)
+func (s *AuthService) Login(ctx context.Context, req LoginRequest, deviceID, ip, ua string) (*TokenPair, response.ErrorCode) {
+	user, err := s.repo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, response.EBIZ001000
 	}
@@ -59,7 +60,15 @@ func (s *AuthService) Login(ctx *gin.Context, req LoginRequest) (*TokenPair, res
 		return nil, response.EBIZ001001
 	}
 
-	token, err := s.TokenManager.GenerateTokenPair(user.ID)
+	err = s.repo.DeleteRefreshTokenByDevice(ctx, dbCtx.DeleteRefreshTokenByDeviceParams{
+		UserID:   user.ID,
+		DeviceID: deviceID,
+	})
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to delete refresh token for user %s on device %s: %v", user.ID, deviceID, err))
+	}
+
+	token, err := s.tokenMgr.GenerateTokenPair(user.ID)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error occurred during a cryptographic operation: %v", err))
 
@@ -68,9 +77,12 @@ func (s *AuthService) Login(ctx *gin.Context, req LoginRequest) (*TokenPair, res
 
 	tokenHash := utils.HashSHA256(token.RefreshToken)
 
-	err = s.Store.StoreRefreshToken(ctx, dbCtx.StoreRefreshTokenParams{
+	err = s.repo.StoreRefreshToken(ctx, dbCtx.StoreRefreshTokenParams{
 		UserID:    user.ID,
 		TokenHash: tokenHash,
+		DeviceID:  deviceID,
+		Ip:        sql.NullString{String: ip, Valid: ip != ""},
+		UserAgent: sql.NullString{String: ua, Valid: ua != ""},
 		ExpiresAt: token.RefreshTokenExpires,
 	})
 	if err != nil {
@@ -82,8 +94,8 @@ func (s *AuthService) Login(ctx *gin.Context, req LoginRequest) (*TokenPair, res
 	return token, response.SBIZ000001
 }
 
-func (s *AuthService) RefreshToken(ctx *gin.Context, UserID string, refreshToken string) (*TokenPair, response.ErrorCode) {
-	dbToken, err := s.Store.GetRefreshToken(ctx, dbCtx.GetRefreshTokenParams{
+func (s *AuthService) RefreshToken(ctx context.Context, UserID string, refreshToken string) (*TokenPair, response.ErrorCode) {
+	dbToken, err := s.repo.GetRefreshToken(ctx, dbCtx.GetRefreshTokenParams{
 		UserID:    UserID,
 		TokenHash: utils.HashSHA256(refreshToken),
 	})
@@ -96,15 +108,15 @@ func (s *AuthService) RefreshToken(ctx *gin.Context, UserID string, refreshToken
 	if dbToken.ExpiresAt.Before(time.Now()) {
 		logger.Error("Refresh user token operation failed: token expired")
 
-		_ = s.Store.DeleteRefreshToken(ctx, dbCtx.DeleteRefreshTokenParams{
+		_ = s.repo.DeleteRefreshToken(ctx, dbCtx.DeleteRefreshTokenParams{
 			UserID:    UserID,
-			TokenHash: refreshToken,
+			TokenHash: dbToken.TokenHash,
 		})
 
 		return nil, response.EBIZ001004
 	}
 
-	newAccessToken, newAccessTokenExpires, err := s.TokenManager.GenerateAccessToken(UserID)
+	newAccessToken, newAccessTokenExpires, err := s.tokenMgr.GenerateAccessToken(UserID)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error occurred during a cryptographic operation: %v", err))
 

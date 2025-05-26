@@ -3,8 +3,8 @@ package validator
 import (
 	"errors"
 
-	"github.com/SekiroKenjii/go-blog-engine/internal/utils"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/utils"
 	"github.com/gin-gonic/gin"
 
 	goValidator "github.com/go-playground/validator/v10"

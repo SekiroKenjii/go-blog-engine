@@ -1,27 +1,14 @@
-package auth
+package jwt
 
 import (
 	"errors"
 	"time"
 
-	"github.com/SekiroKenjii/go-blog-engine/internal/utils"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/utils"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type TokenType string
-
-const (
-	AccessToken  TokenType = "access"
-	RefreshToken TokenType = "refresh"
-)
-
-type CustomClaims struct {
-	jwt.RegisteredClaims
-	TokenType TokenType `json:"type"`
-	UserID    string    `json:"user_id"`
-}
-
-func generateToken(userID string, expiry time.Time, typ TokenType, key []byte) (string, error) {
+func GenerateToken(userID string, expiry time.Time, typ TokenType, key []byte) (string, error) {
 	claims := CustomClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiry),

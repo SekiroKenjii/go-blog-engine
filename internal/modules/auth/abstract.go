@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"context"
 	"time"
 
 	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/jwt"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
 	"github.com/gin-gonic/gin"
 )
@@ -24,15 +26,14 @@ type IAuthHandler interface {
 }
 
 type IAuthService interface {
-	Register(*gin.Context, RegisterRequest) response.ErrorCode
-	Login(*gin.Context, LoginRequest) (*TokenPair, response.ErrorCode)
-	RefreshToken(*gin.Context, string, string) (*TokenPair, response.ErrorCode)
+	Register(context.Context, RegisterRequest) response.ErrorCode
+	Login(context.Context, LoginRequest, string, string, string) (*TokenPair, response.ErrorCode)
+	RefreshToken(context.Context, string, string) (*TokenPair, response.ErrorCode)
 }
 
 type ITokenManager interface {
 	GenerateTokenPair(string) (*TokenPair, error)
 	GenerateAccessToken(string) (string, time.Time, error)
 	GenerateRefreshToken(int) (string, time.Time, error)
-	ValidateAccessToken(string) (*CustomClaims, error)
-	ValidateRefreshToken(string) (*CustomClaims, error)
+	ValidateAccessToken(string) (*jwt.CustomClaims, error)
 }

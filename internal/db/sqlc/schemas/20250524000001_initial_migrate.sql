@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(26) PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -23,12 +25,15 @@ CREATE TABLE IF NOT EXISTS posts (
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id SERIAL PRIMARY KEY,
     user_id VARCHAR(26) NOT NULL REFERENCES users (id),
-    device_id TEXT NOT NULL DEFAULT 'unknown',
-    ip TEXT,
-    user_agent TEXT,
     token_hash TEXT NOT NULL UNIQUE,
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- +goose StatementEnd
 
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_device ON refresh_tokens (user_id, device_id);
+-- +goose Down
+-- +goose StatementBegin
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS posts;
+DROP TABLE IF EXISTS users;
+-- +goose StatementEnd

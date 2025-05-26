@@ -24,6 +24,8 @@ Go Blog Engine is a lightweight, scalable blog platform designed for speed and s
 - Go 1.20 or higher
 - PostgreSQL (or your preferred database)
 - Redis (optional, for caching)
+- [yq](https://mikefarah.gitbook.io/yq/) - portable command-line YAML, JSON, XML, CSV, TOML and properties processor
+- [goose](http://pressly.github.io/goose/) - a database migration tool
 
 ### Getting Started
 
@@ -40,28 +42,21 @@ cd go-blog-engine
 go mod download
 ```
 
-3. Set up environment variables (create a `develop.yml` file and `docker.yml` file in `./config/env/` folder base on `example.yml` file)
+3. Set up environment variables (create a `develop.yml` file in `./config/env/` folder base on `example.yml` file)
 
-4. Set up docker (create a `docker-compose.yml` file and `docker-compose-db.yml` file in `./environments/docker/` folder base on `docker-compose-example.yml` file)
-   - docker-compose.yml: contains two services - a PostgreSQL database and an API service
-   - docker-compose-db.yml: contains only the PostgreSQL database service
+4. Set up docker (create a `docker-compose.yml` file in `./environments/docker/` folder base on `docker-compose-example.yml` file)
 
 5. Generate swagger files
 
 ```bash
-make swagger-gen
+make swag-gen
 ```
 
-5. Run the application:
+6. Build and run project:
 
-- start db:
 ```bash
-make docker-build -db
-```
-
-- start Go API:
-```bash
-make server
+chmod +x scripts/build/build.sh
+./scripts/build/build.sh
 ```
 
 ### Documentation

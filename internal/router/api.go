@@ -7,7 +7,7 @@ import (
 )
 
 func (r *Router) addAPIRoutes() {
-	apiRoutes := r.Engine.Group("/api")
+	apiRoutes := r.engine.Group("/api")
 
 	r.addAPIRoutesV1(apiRoutes)
 }
@@ -15,7 +15,7 @@ func (r *Router) addAPIRoutes() {
 func (r *Router) addAPIRoutesV1(apiRoutes *gin.RouterGroup) {
 	v1 := apiRoutes.Group("/v1")
 	{
-		register(auth.Instance(), v1)
+		register(auth.NewAuthHandler(), v1)
 	}
 }
 

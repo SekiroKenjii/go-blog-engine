@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/SekiroKenjii/go-blog-engine/config"
-	"github.com/SekiroKenjii/go-blog-engine/internal/modules/auth"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/jwt"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
 	"github.com/gin-gonic/gin"
 )
@@ -19,9 +19,9 @@ func Auth() gin.HandlerFunc {
 		tokenString := extractToken(c.Request)
 
 		// Parse and validate the token
-		claims, err := auth.ParseToken(tokenString, []byte(tokenConfig.SecretKey))
+		claims, err := jwt.ParseToken(tokenString, []byte(tokenConfig.SecretKey))
 		if tokenString != "" && err != nil {
-			response.AuthenticationHeaderError(c)
+			response.AuthorizationHeaderError(c)
 
 			return
 		}

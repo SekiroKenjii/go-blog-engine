@@ -30,6 +30,7 @@ func Cors() gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Origin", allowedOrigin)
 		c.Header("Access-Control-Allow-Methods", corsConfig.AllowMethods)
 		c.Header("Access-Control-Allow-Headers", corsConfig.AllowHeaders)
+		c.Header("Access-Control-Expose-Headers", corsConfig.ExposeHeaders)
 		c.Header("Access-Control-Max-Age", strconv.FormatInt(int64(corsConfig.MaxAge), 10))
 
 		if corsConfig.AllowCredentials {
