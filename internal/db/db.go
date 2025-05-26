@@ -9,25 +9,26 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/SekiroKenjii/go-blog-engine/config"
+	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
 )
 
 var (
-	instance *DB
-	once     sync.Once
+	dbInstance *Database
+	dbOnce     sync.Once
 )
 
-type DB struct {
-	Postgres *sql.DB
+type Database struct {
+	pg *sql.DB
 }
 
-func Instance() *DB {
-	once.Do(func() {
-		instance = &DB{
-			Postgres: newPostgres(),
+func DatabaseInstance() abstract.IDatabase {
+	dbOnce.Do(func() {
+		dbInstance = &Database{
+			pg: newPostgres(),
 		}
 	})
 
-	return instance
+	return dbInstance
 }
 
 func newPostgres() *sql.DB {
@@ -55,4 +56,8 @@ func newPostgres() *sql.DB {
 	db.SetConnMaxLifetime(time.Duration(pgConf.ConnMaxLifetime))
 
 	return db
+}
+
+func (db *Database) Postgres() *sql.DB {
+	return db.pg
 }

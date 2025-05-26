@@ -3,7 +3,7 @@ package config
 import (
 	"sync"
 
-	"github.com/SekiroKenjii/go-blog-engine/internal/utils"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/utils"
 	"github.com/spf13/viper"
 )
 

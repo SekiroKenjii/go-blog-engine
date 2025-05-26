@@ -82,15 +82,13 @@ func TooManyRequest(c *gin.Context) {
 	)
 }
 
-func AuthenticationHeaderError(c *gin.Context) {
+func AuthorizationHeaderError(c *gin.Context) {
 	Failure(
 		c,
 		http.StatusUnauthorized,
 		ESYS000011,
 		&[]ErrorInner{
-			{
-				Code: string(ESYS000011),
-			},
+			{Code: string(ESYS000011)},
 		},
 		nil,
 	)
