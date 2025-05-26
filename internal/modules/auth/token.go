@@ -48,6 +48,7 @@ func newTokenManager() *TokenManager {
 	}
 }
 
+// GenerateTokenPair implements ITokenManager.
 func (tm *TokenManager) GenerateTokenPair(userID string) (*TokenPair, error) {
 	access, accessExpires, err := tm.GenerateAccessToken(userID)
 	if err != nil {
@@ -67,6 +68,7 @@ func (tm *TokenManager) GenerateTokenPair(userID string) (*TokenPair, error) {
 	}, nil
 }
 
+// GenerateAccessToken implements ITokenManager.
 func (tm *TokenManager) GenerateAccessToken(userID string) (string, time.Time, error) {
 	expires := time.Now().Add(tm.accessTTL)
 	token, err := jwt.GenerateToken(userID, expires, jwt.AccessToken, tm.secretKey)
@@ -74,6 +76,7 @@ func (tm *TokenManager) GenerateAccessToken(userID string) (string, time.Time, e
 	return token, expires, err
 }
 
+// GenerateRefreshToken implements ITokenManager.
 func (tm *TokenManager) GenerateRefreshToken(length int) (string, time.Time, error) {
 	expires := time.Now().Add(tm.refreshTTL)
 	bytes := make([]byte, length)
@@ -87,6 +90,7 @@ func (tm *TokenManager) GenerateRefreshToken(length int) (string, time.Time, err
 	return token, expires, err
 }
 
+// ValidateAccessToken implements ITokenManager.
 func (tm *TokenManager) ValidateAccessToken(token string) (*jwt.CustomClaims, error) {
 	return jwt.ParseToken(token, tm.secretKey)
 }

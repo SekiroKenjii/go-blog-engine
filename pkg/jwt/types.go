@@ -9,6 +9,8 @@ const (
 	RefreshToken TokenType = "refresh"
 )
 
+// CustomClaims defines the structure of the JWT claims used in the application.
+// It includes standard JWT claims along with custom fields for token type and user ID.
 type CustomClaims struct {
 	jwt.RegisteredClaims
 	TokenType TokenType `json:"type"`

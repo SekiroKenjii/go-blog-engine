@@ -8,6 +8,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// GenerateToken creates a JWT token with the specified user ID, expiry time, token type, and signing key.
+// It returns the signed token string or an error if the signing fails.
 func GenerateToken(userID string, expiry time.Time, typ TokenType, key []byte) (string, error) {
 	claims := CustomClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -25,6 +27,8 @@ func GenerateToken(userID string, expiry time.Time, typ TokenType, key []byte) (
 	return token.SignedString(key)
 }
 
+// ParseToken parses a JWT token string and returns the custom claims if the token is valid.
+// It validates the signing method and extracts the claims, returning an error if the token is invalid or the claims cannot be parsed.
 func ParseToken(tokenStr string, key []byte) (*CustomClaims, error) {
 	// Parse the token
 	token, err := jwt.ParseWithClaims(tokenStr, &CustomClaims{}, func(token *jwt.Token) (any, error) {

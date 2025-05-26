@@ -26,6 +26,7 @@ func NewAuthService() IAuthService {
 	}
 }
 
+// Register implements IAuthService.
 func (s *AuthService) Register(ctx context.Context, req RegisterRequest) response.ErrorCode {
 	hashedPwd, err := utils.HashPassword(req.Password)
 	if err != nil {
@@ -50,6 +51,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) respons
 	return response.SBIZ000001
 }
 
+// Login implements IAuthService.
 func (s *AuthService) Login(ctx context.Context, req LoginRequest, deviceID, ip, ua string) (*TokenPair, response.ErrorCode) {
 	user, err := s.repo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
@@ -94,6 +96,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest, deviceID, ip,
 	return token, response.SBIZ000001
 }
 
+// RefreshToken implements IAuthService.
 func (s *AuthService) RefreshToken(ctx context.Context, UserID string, refreshToken string) (*TokenPair, response.ErrorCode) {
 	dbToken, err := s.repo.GetRefreshToken(ctx, dbCtx.GetRefreshTokenParams{
 		UserID:    UserID,
@@ -129,4 +132,44 @@ func (s *AuthService) RefreshToken(ctx context.Context, UserID string, refreshTo
 		RefreshToken:        refreshToken,
 		RefreshTokenExpires: dbToken.ExpiresAt,
 	}, response.SBIZ000001
+}
+
+// Logout implements IAuthService.
+func (s *AuthService) Logout(context.Context, string, string) response.ErrorCode {
+	panic("unimplemented")
+}
+
+// ResendVerificationEmail implements IAuthService.
+func (s *AuthService) ResendVerificationEmail(context.Context, string) response.ErrorCode {
+	panic("unimplemented")
+}
+
+// ResendVerificationPhone implements IAuthService.
+func (s *AuthService) ResendVerificationPhone(context.Context, string) response.ErrorCode {
+	panic("unimplemented")
+}
+
+// ResetPassword implements IAuthService.
+func (s *AuthService) ResetPassword(context.Context, string, string, string) response.ErrorCode {
+	panic("unimplemented")
+}
+
+// SendPasswordResetEmail implements IAuthService.
+func (s *AuthService) SendPasswordResetEmail(context.Context, string) response.ErrorCode {
+	panic("unimplemented")
+}
+
+// VerifyEmail implements IAuthService.
+func (s *AuthService) VerifyEmail(context.Context, string, string) response.ErrorCode {
+	panic("unimplemented")
+}
+
+// VerifyPasswordResetToken implements IAuthService.
+func (s *AuthService) VerifyPasswordResetToken(context.Context, string, string) response.ErrorCode {
+	panic("unimplemented")
+}
+
+// VerifyPhone implements IAuthService.
+func (s *AuthService) VerifyPhone(context.Context, string, string) response.ErrorCode {
+	panic("unimplemented")
 }

@@ -14,9 +14,10 @@ func GetUserID(c *gin.Context) (string, bool) {
 	return userID.(string), true
 }
 
-// GetDeviceInfo retrieves device information from the request context.
+// GetDeviceInfo retrieves device information from the http request context.
 // It returns the device ID, client IP, and user agent.
 // If the device ID is not present in the headers, it generates a new UUID.
+// The device ID is always set in the response header for consistency.
 func GetDeviceInfo(c *gin.Context) (string, string, string) {
 	deviceID := c.GetHeader("X-Device-ID")
 	if deviceID == "" {

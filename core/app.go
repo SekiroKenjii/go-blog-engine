@@ -22,6 +22,9 @@ type Application struct {
 	router abstract.IRouter
 }
 
+// Bootstrap initializes the application components such as configuration, Redis cache, and router.
+// It returns an instance of the Application struct.
+// This function is typically called at the start of the application to set up the necessary services.
 func Bootstrap() *Application {
 	cfg := config.Instance()
 	redis := cache.RedisInstance()
@@ -36,8 +39,9 @@ func Bootstrap() *Application {
 	}
 }
 
+// BuildHttpServer creates and configures an HTTP server using the application configuration and router.
 func (a *Application) BuildHttpServer() *http.Server {
-	a.router.SetupRoutes()
+	a.router.Configure()
 
 	return &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", a.config.Server.Host, a.config.Server.Port),
@@ -48,6 +52,10 @@ func (a *Application) BuildHttpServer() *http.Server {
 	}
 }
 
+// Run starts the HTTP server and listens for incoming requests.
+// It blocks until the server is shut down or an error occurs.
+// If an error occurs while starting the server, it panics with the error message.
+// This function is typically called after the server is built to start handling requests.
 func (a *Application) Run(httpSrv *http.Server) {
 	err := httpSrv.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
@@ -57,6 +65,11 @@ func (a *Application) Run(httpSrv *http.Server) {
 	logger.Info(fmt.Sprintf("Server is running on port: %d", a.config.Server.Port))
 }
 
+// Shutdown gracefully shuts down the HTTP server when a termination signal is received.
+// It listens for SIGINT and SIGTERM signals, waits for a maximum of 5 seconds for the server to shut down,
+// and then closes the server. If the server cannot shut down normally, it logs an error message.
+// After the shutdown process is complete, it sends a signal to the done channel to indicate that the shutdown is complete.
+// This function is typically called in a separate goroutine to handle graceful shutdowns of the application.
 func (a *Application) Shutdown(httpSrv *http.Server, done chan bool) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

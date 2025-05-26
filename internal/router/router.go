@@ -37,16 +37,14 @@ func NewRouter() abstract.IRouter {
 	}
 }
 
-func (r *Router) SetupRoutes() {
+// Configure implements IRouter.
+func (r *Router) Configure() {
 	r.addMiddlewares()
 	r.addOpenAPI()
 	r.addAPIRoutes()
 }
 
-func (r *Router) Engine() *gin.Engine {
-	return r.engine
-}
-
+// addMiddlewares adds the necessary middlewares to the gin engine.
 func (r *Router) addMiddlewares() {
 	r.engine.Use(middlewares.ErrorHandler())
 	r.engine.Use(middlewares.Cors())
@@ -54,6 +52,7 @@ func (r *Router) addMiddlewares() {
 	r.engine.Use(middlewares.Auth())
 }
 
+// addOpenAPI adds the OpenAPI documentation routes to the gin engine.
 func (r *Router) addOpenAPI() {
 	r.engine.GET("/docs/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -71,4 +70,9 @@ func (r *Router) addOpenAPI() {
 
 		fmt.Fprintln(c.Writer, htmlContent)
 	})
+}
+
+// Engine implements IRouter.
+func (r *Router) Engine() *gin.Engine {
+	return r.engine
 }

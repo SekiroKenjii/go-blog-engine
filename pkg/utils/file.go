@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+// EnsureFileURL ensures that the provided file path is a valid file URL.
+// If the path is relative, it resolves it against the current working directory.
+// If the path is already a file URL, it checks if the path is absolute.
+// If the path is not absolute, it resolves it against the current working directory.
+// It returns the file URL as a string or an error if any issues occur during the process.
+// The returned file URL will always start with "file://".
 func EnsureFileURL(filePath string) (string, error) {
 	if strings.HasPrefix(filePath, "file://") {
 		if path := strings.TrimPrefix(filePath, "file://"); !filepath.IsAbs(path) {
@@ -40,6 +46,9 @@ func EnsureFileURL(filePath string) (string, error) {
 	return "file://" + resolvedPath, nil
 }
 
+// FetchContentFromURL fetches the content from a given file URL.
+// It performs an HTTP GET request to the URL and returns the content as a string.
+// If the URL scheme is not "file", it returns an error.
 func FetchContentFromURL(fileURL string) (string, error) {
 	resp, err := http.Get(fileURL)
 	if err != nil {
@@ -55,6 +64,10 @@ func FetchContentFromURL(fileURL string) (string, error) {
 	return string(content), nil
 }
 
+// ReadFileFromURL reads the content of a file from a given file URL.
+// It parses the URL, checks if the scheme is "file", and reads the file content.
+// If the URL scheme is not "file", it returns an error.
+// It returns the file content as a byte slice or an error if any issues occur.
 func ReadFileFromURL(fileURL string) ([]byte, error) {
 	parsedURL, err := url.Parse(fileURL)
 	if err != nil {

@@ -2,6 +2,9 @@ package utils
 
 import "os"
 
+// GetEnvFromArgs retrieves the environment name from command line arguments.
+// If no environment name is provided, it returns the default value specified in the fallback parameter.
+// If no fallback value is provided, it defaults to an empty string.
 func GetEnvFromArgs(fallback ...string) string {
 	defaultValue := ""
 
