@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ctx             = context.Background()
+	redisCtx        = context.Background()
 	redisRetryCount = 0
 	maxRetries      = 3
 	redisMux        sync.Mutex
@@ -55,13 +55,13 @@ func newRedisClient() *redis.Client {
 	})
 
 	// Check the connection
-	_, err := rdb.Ping(ctx).Result()
+	_, err := rdb.Ping(redisCtx).Result()
 	if err != nil {
 		logger.Fatal("Failed to connect to Redis Sentinel", zap.Error(err))
 	}
 
 	// Set a test key to verify the connection
-	err = rdb.Set(ctx, "test_key", "Redis Sentinel Instance!", 0).Err()
+	err = rdb.Set(redisCtx, "test_key", "Redis Sentinel Instance!", 0).Err()
 	if err != nil {
 		logger.Fatal("Error setting key", zap.Error(err))
 	}
