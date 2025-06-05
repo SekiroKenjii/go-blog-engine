@@ -12,7 +12,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, first_name, last_name, password_hash)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, email, password_hash, first_name, last_name, created_at, updated_at
+RETURNING id, email, password_hash, first_name, last_name, created_at, updated_at, is_verified, locked_until
 `
 
 type CreateUserParams struct {
@@ -40,6 +40,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.LastName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsVerified,
+		&i.LockedUntil,
 	)
 	return i, err
 }
@@ -96,4 +98,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, e
 		&i.PasswordHash,
 	)
 	return i, err
+}
+
+const markUserVerified = `-- name: MarkUserVerified :exec
+UPDATE users SET is_verified = TRUE WHERE id = $1
+`
+
+func (q *Queries) MarkUserVerified(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, markUserVerified, id)
+	return err
 }

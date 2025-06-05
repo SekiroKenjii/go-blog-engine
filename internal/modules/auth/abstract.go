@@ -18,11 +18,6 @@ type IAuthHandler interface {
 	RefreshToken(*gin.Context)
 	Logout(*gin.Context)
 	VerifyEmail(*gin.Context)
-	VerifyPhone(*gin.Context)
-	ResendVerificationEmail(*gin.Context)
-	ResendVerificationPhone(*gin.Context)
-	SendPasswordResetEmail(*gin.Context)
-	VerifyPasswordResetToken(*gin.Context)
 	ResetPassword(*gin.Context)
 }
 
@@ -30,12 +25,12 @@ type IAuthService interface {
 	// Register allows a new user to create an account with their email, first name, last name, and password.
 	// It hashes the password before storing it in the database.
 	// Returns an error code indicating the success or failure of the operation.
-	Register(context.Context, RegisterRequest) response.ErrorCode
+	Register(context.Context, string, string, string, string) response.ErrorCode
 
 	// Login allows a user to authenticate using their email and password, generating a token pair upon successful login.
 	// It also deletes any existing refresh token for the user on the specified device before generating a new one.
 	// It returns a TokenPair containing the access and refresh tokens, or an error code if the login fails.
-	Login(context.Context, LoginRequest, string, string, string) (*TokenPair, response.ErrorCode)
+	Login(context.Context, string, string, string, string, string) (*TokenPair, response.ErrorCode)
 
 	// RefreshToken allows a user to obtain a new access token using a valid refresh token.
 	// It validates the refresh token and generates a new token pair if valid.
@@ -44,27 +39,17 @@ type IAuthService interface {
 
 	// Logout allows a user to log out from a specific device by deleting the refresh token associated with that device.
 	// It returns an error code indicating the success or failure of the logout operation.
-	Logout(context.Context, string, string) response.ErrorCode
+	Logout(context.Context, string, string, string) response.ErrorCode
 
-	// VerifyEmail and VerifyPhone allow users to verify their email and phone number respectively.
-	// They take a context, a verification token, and the user's identifier (email or phone number).
+	// VerifyEmail allows users to verify their email respectively.
+	// It takes a context and the email verification token.
 	// Returns an error code indicating the success or failure of the verification.
-	VerifyEmail(context.Context, string, string) response.ErrorCode
+	VerifyEmail(context.Context, string) response.ErrorCode
 
-	// VerifyPhone allows users to verify their phone number.
-	// It takes a context, a verification token, and the user's phone number.
-	// Returns an error code indicating the success or failure of the verification.
-	VerifyPhone(context.Context, string, string) response.ErrorCode
-
-	// ResendVerificationEmail and ResendVerificationPhone allow users to resend verification emails or phone messages.
-	// They take a context and the user's email or phone number.
-	// Returns an error code indicating the success or failure of the resend operation.
-	ResendVerificationEmail(context.Context, string) response.ErrorCode
-
-	// ResendVerificationPhone allows users to resend verification phone messages.
-	// It takes a context and the user's phone number.
-	// Returns an error code indicating the success or failure of the resend operation.
-	ResendVerificationPhone(context.Context, string) response.ErrorCode
+	// SendVerificationEmail allows users to send a verification email.
+	// It takes a context and the user's email address.
+	// Returns an error code indicating the success or failure of the operation.
+	SendVerificationEmail(context.Context, string) response.ErrorCode
 
 	// SendPasswordResetEmail allows users to initiate a password reset process by sending a reset email.
 	// It takes a context and the user's email address.

@@ -40,4 +40,6 @@ type User struct {
 	LastName     string       `json:"last_name"`
 	CreatedAt    sql.NullTime `json:"created_at"`
 	UpdatedAt    sql.NullTime `json:"updated_at"`
+	IsVerified   sql.NullBool `json:"is_verified"`
+	LockedUntil  sql.NullTime `json:"locked_until"`
 }

@@ -5,13 +5,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetUserID(c *gin.Context) (string, bool) {
+// GetUserID retrieves the user ID from the http request context.
+// It checks if the user ID is present in the context and returns it.
+func GetUserID(c *gin.Context) string {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		return "", false
+		return ""
 	}
 
-	return userID.(string), true
+	return userID.(string)
 }
 
 // GetDeviceInfo retrieves device information from the http request context.
@@ -31,4 +33,15 @@ func GetDeviceInfo(c *gin.Context) (string, string, string) {
 	ua := c.Request.UserAgent()
 
 	return deviceID, ip, ua
+}
+
+// GetQueryParam retrieves a query parameter from the http request context.
+// It checks if the parameter exists and returns its value.
+func GetQueryParam(c *gin.Context, key string) string {
+	value, exists := c.GetQuery(key)
+	if !exists {
+		return ""
+	}
+
+	return value
 }

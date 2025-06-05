@@ -28,11 +28,6 @@ func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
 	auth.POST("/refresh-token", h.RefreshToken)
 	auth.POST("/logout", h.Logout)
 	auth.POST("/verify-email", h.VerifyEmail)
-	auth.POST("/verify-phone", h.VerifyPhone)
-	auth.POST("/resend-verification-email", h.ResendVerificationEmail)
-	auth.POST("/resend-verification-phone", h.ResendVerificationPhone)
-	auth.POST("/send-password-reset-email", h.SendPasswordResetEmail)
-	auth.POST("/verify-password-reset-token", h.VerifyPasswordResetToken)
 	auth.POST("/reset-password", h.ResetPassword)
 }
 
@@ -53,7 +48,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if bizErrCode := h.service.Register(c.Request.Context(), req); bizErrCode != response.SBIZ000001 {
+	if bizErrCode := h.service.Register(c.Request.Context(), req.Email, req.FirstName, req.LastName, req.Password); bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
 
 		return
@@ -83,7 +78,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	deviceID, ip, ua := accessor.GetDeviceInfo(c)
 
-	tokenPair, bizErrCode := h.service.Login(c.Request.Context(), req, deviceID, ip, ua)
+	tokenPair, bizErrCode := h.service.Login(c.Request.Context(), req.Email, req.Password, deviceID, ip, ua)
 	if bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
 
@@ -113,8 +108,8 @@ func (h *Handler) Login(c *gin.Context) {
 // @Failure     500 {object} response.Response[any] "Internal server error: cryptographic operation failed"
 // @Router      /api/v1/auth/refresh-token [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
-	userID, exists := accessor.GetUserID(c)
-	if !exists {
+	userID := accessor.GetUserID(c)
+	if userID == "" {
 		response.Forbidden(c)
 
 		return
@@ -158,7 +153,31 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 // @Failure     500 {object} response.Response[any] "Internal server error"
 // @Router      /api/v1/auth/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
-	// TODO: Implement Logout logic
+	userID := accessor.GetUserID(c)
+	if userID == "" {
+		response.Forbidden(c)
+
+		return
+	}
+
+	var req LogoutRequest
+
+	if err := validator.ValidateRequest(c, &req); err != nil {
+		response.Failure(c, http.StatusBadRequest, response.EBIZ000002, err, nil)
+
+		return
+	}
+
+	deviceID, _, _ := accessor.GetDeviceInfo(c)
+
+	bizErrCode := h.service.Logout(c.Request.Context(), userID, deviceID, req.RefreshToken)
+	if bizErrCode != response.SBIZ000001 {
+		response.HandleBizFailure(c, bizErrCode, http.StatusUnauthorized)
+
+		return
+	}
+
+	response.Success[any](c, http.StatusOK, "User logged out successfully", nil, nil)
 }
 
 // VerifyEmail godoc
@@ -172,78 +191,26 @@ func (h *Handler) Logout(c *gin.Context) {
 // @Failure     500 {object} response.Response[any] "Internal server error"
 // @Router      /api/v1/auth/verify-email [post]
 func (h *Handler) VerifyEmail(c *gin.Context) {
-	// TODO: Implement VerifyEmail logic
-}
+	token := accessor.GetQueryParam(c, "token")
+	if token == "" {
+		response.Forbidden(c, response.EBIZ000006)
 
-// VerifyPhone godoc
-// @Summary     Verify user phone number
-// @Description Verify user phone number using verification code
-// @Tags        auth
-// @Accept      json
-// @Produce     json
-// @Success     200 {object} response.Response[any] "Phone number verified successfully"
-// @Failure     400 {object} response.Response[any] "Validation error or phone verification failed"
-// @Failure     500 {object} response.Response[any] "Internal server error"
-// @Router      /api/v1/auth/verify-phone [post]
-func (h *Handler) VerifyPhone(c *gin.Context) {
-	// TODO: Implement VerifyPhone logic
-}
+		return
+	}
 
-// ResendVerificationEmail godoc
-// @Summary     Resend verification email
-// @Description Resend verification email to user if it was not received or expired
-// @Tags        auth
-// @Accept      json
-// @Produce     json
-// @Success     200 {object} response.Response[any] "Verification email resent successfully"
-// @Failure     400 {object} response.Response[any] "Validation error or email not found"
-// @Failure     500 {object} response.Response[any] "Internal server error"
-// @Router      /api/v1/auth/resend-verification-email [post]
-func (h *Handler) ResendVerificationEmail(c *gin.Context) {
-	// TODO: Implement ResendVerificationEmail logic
-}
+	bizErrCode := h.service.VerifyEmail(c.Request.Context(), token)
+	if bizErrCode == response.FATA001001 || bizErrCode == response.FATA002001 {
+		// resend verification email if token verification fails
+		return
+	}
 
-// ResendVerificationPhone godoc
-// @Summary     Resend verification phone
-// @Description Resend verification phone number to user if it was not received or expired
-// @Tags        auth
-// @Accept      json
-// @Produce     json
-// @Success     200 {object} response.Response[any] "Verification phone resent successfully"
-// @Failure     400 {object} response.Response[any] "Validation error or phone not found"
-// @Failure     500 {object} response.Response[any] "Internal server error"
-// @Router      /api/v1/auth/resend-verification-phone [post]
-func (h *Handler) ResendVerificationPhone(c *gin.Context) {
-	// TODO: Implement ResendVerificationPhone logic
-}
+	if bizErrCode != response.SBIZ000001 {
+		response.HandleBizFailure(c, bizErrCode)
 
-// SendPasswordResetEmail godoc
-// @Summary     Send password reset email
-// @Description Send password reset email to user with reset link
-// @Tags        auth
-// @Accept      json
-// @Produce     json
-// @Success     200 {object} response.Response[any] "Password reset email sent successfully"
-// @Failure     400 {object} response.Response[any] "Validation error or email not found"
-// @Failure     500 {object} response.Response[any] "Internal server error"
-// @Router      /api/v1/auth/send-password-reset-email [post]
-func (h *Handler) SendPasswordResetEmail(c *gin.Context) {
-	// TODO: Implement SendPasswordResetEmail logic
-}
+		return
+	}
 
-// VerifyPasswordResetToken godoc
-// @Summary     Verify password reset token
-// @Description Verify password reset token to ensure it is valid and not expired
-// @Tags        auth
-// @Accept      json
-// @Produce     json
-// @Success     200 {object} response.Response[any] "Token verified successfully"
-// @Failure     400 {object} response.Response[any] "Validation error or token invalid"
-// @Failure     401 {object} response.Response[any] "Invalid reset token or token expired"
-// @Failure     500 {object} response.Response[any] "Internal server error"
-// @Router      /api/v1/auth/verify-password-reset-token [post]
-func (h *Handler) VerifyPasswordResetToken(c *gin.Context) {
-	// TODO: Implement VerifyPasswordResetToken logic
+	response.Success[any](c, http.StatusOK, "Email verified successfully", nil, nil)
 }
 
 // ResetPassword godoc
@@ -258,5 +225,5 @@ func (h *Handler) VerifyPasswordResetToken(c *gin.Context) {
 // @Failure     500 {object} response.Response[any] "Internal server error"
 // @Router      /api/v1/auth/reset-password [post]
 func (h *Handler) ResetPassword(c *gin.Context) {
-	// TODO: Implement ResetPassword logic
+	response.NotImplemented(c)
 }

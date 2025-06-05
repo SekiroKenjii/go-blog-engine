@@ -19,6 +19,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	GetUserByID(ctx context.Context, id string) (GetUserByIDRow, error)
 	ListPublishedPost(ctx context.Context, arg ListPublishedPostParams) ([]Post, error)
+	MarkUserVerified(ctx context.Context, id string) error
 	PublishPost(ctx context.Context, id string) error
 	StoreRefreshToken(ctx context.Context, arg StoreRefreshTokenParams) error
 }

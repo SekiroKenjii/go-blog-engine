@@ -12,3 +12,6 @@ LIMIT 1;
 SELECT id, email, first_name, last_name, password_hash FROM users
 WHERE id = $1
 LIMIT 1;
+
+-- name: MarkUserVerified :exec
+UPDATE users SET is_verified = TRUE WHERE id = $1;

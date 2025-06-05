@@ -92,8 +92,32 @@ func GenerateULID(t *time.Time) string {
 	return strings.ToLower(ulid.Make().String())
 }
 
+// ParseULID parses a string into a ULID.
+// If the string is not a valid ULID, it returns an empty ULID and an error.
+// If the string is valid, it returns the parsed ULID.
+func ParseULID(id string) (ulid.ULID, error) {
+	parsed, err := ulid.Parse(id)
+	if err != nil {
+		return ulid.ULID{}, err
+	}
+
+	return parsed, nil
+}
+
 // GenerateUUID generates a new UUID (Universally Unique Identifier).
 // It returns the UUID as a lowercase string.
 func GenerateUUID() string {
 	return strings.ToLower(uuid.New().String())
+}
+
+// ParseUUID parses a string into a UUID.
+// If the string is not a valid UUID, it returns uuid.Nil and an error.
+// If the string is valid, it returns the parsed UUID.
+func ParseUUID(id string) (uuid.UUID, error) {
+	parsed, err := uuid.Parse(id)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return parsed, nil
 }

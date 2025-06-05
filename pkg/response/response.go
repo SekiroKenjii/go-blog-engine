@@ -108,14 +108,20 @@ func AuthorizationHeaderError(c *gin.Context) {
 
 // Forbidden constructs a response indicating that access to the requested resource is forbidden.
 // It sends a JSON response with a 403 Forbidden status code and an appropriate error message.
-func Forbidden(c *gin.Context) {
+func Forbidden(c *gin.Context, defaultErrorCode ...ErrorCode) {
+	errorCode := EBIZ000003
+
+	if len(defaultErrorCode) > 0 {
+		errorCode = defaultErrorCode[0]
+	}
+
 	Failure(
 		c,
 		http.StatusForbidden,
-		EBIZ000003,
+		errorCode,
 		&[]ErrorInner{
 			{
-				Code: string(EBIZ000003),
+				Code: string(errorCode),
 			},
 		},
 		nil,

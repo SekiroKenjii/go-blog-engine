@@ -18,6 +18,10 @@ const (
 	EBIZ000004 ErrorCode = "EBIZ000004"
 	// Error: Request Body Field Invalid
 	EBIZ000005 ErrorCode = "EBIZ000005"
+	// Error: Request Parameters Required
+	EBIZ000006 ErrorCode = "EBIZ000006"
+	// Error: Request Parameters Invalid
+	EBIZ000007 ErrorCode = "EBIZ000007"
 	// Error: Wrong User Credentials
 	EBIZ001000 ErrorCode = "EBIZ001000"
 	// Error: Wrong User Password
@@ -26,8 +30,9 @@ const (
 	EBIZ001002 ErrorCode = "EBIZ001002"
 	// Error: Invalid User Refresh Token
 	EBIZ001003 ErrorCode = "EBIZ001003"
-	// Error: User Refresh Token Expired
+	// Error: User Refresh Token Expired or unauthenticated user
 	EBIZ001004 ErrorCode = "EBIZ001004"
+
 	// Fatal: Rate Limit Exceeded
 	ESYS000010 ErrorCode = "ESYS000010"
 	// Fatal: Authentication Header Not Found
@@ -44,6 +49,8 @@ const (
 	FATA000101 ErrorCode = "FATA000101"
 	// Fatal: Write Database Error
 	FATA001001 ErrorCode = "FATA001001"
+	// Fatal: Write Cache Error
+	FATA002001 ErrorCode = "FATA002001"
 
 	// #endregion
 
@@ -52,28 +59,43 @@ const (
 	// #endregion External Error Code
 )
 
+const (
+	invalidRequest          = "Invalid Request"
+	validationErrorOccurred = "One or more errors occurred while validating the request"
+	authenticationRequired  = "Authentication Required"
+	invalidUserCredentials  = "Invalid User Credentials"
+	rateLimitExceeded       = "Rate Limit Exceeded"
+	internalServerError     = "Internal Server Error"
+	apiNotImplemented       = "API Not Implemented"
+	internalServerWarning   = "Internal Server Warning"
+)
+
 var messages = map[ErrorCode]string{
 	// #region: Internal Error Messages
 
-	EBIZ000001: "Invalid Request",
-	EBIZ000002: "One or more errors occurred while validating the request",
-	EBIZ000003: "Authentication Required",
-	EBIZ000004: "",
-	EBIZ000005: "",
-	EBIZ001000: "Wrong User Credentials",
-	EBIZ001001: "Wrong User Credentials",
-	EBIZ001002: "Invalid User Credentials",
-	EBIZ001003: "Invalid User Credentials",
-	EBIZ001004: "Invalid User Credentials",
-	ESYS000010: "Rate Limit Exceeded",
-	ESYS000011: "Authentication Header Not Found",
+	EBIZ000001: invalidRequest,
+	EBIZ000002: validationErrorOccurred,
+	EBIZ000003: authenticationRequired,
+	EBIZ000004: invalidRequest,
+	EBIZ000005: invalidRequest,
+	EBIZ000006: invalidRequest,
+	EBIZ000007: invalidRequest,
+	EBIZ001000: invalidUserCredentials,
+	EBIZ001001: invalidUserCredentials,
+	EBIZ001002: invalidUserCredentials,
+	EBIZ001003: invalidUserCredentials,
+	EBIZ001004: invalidUserCredentials,
 
-	WBIZ000001: "Server Warning",
+	ESYS000010: rateLimitExceeded,
+	ESYS000011: authenticationRequired,
 
-	FATA000001: "Internal Server Error",
-	FATA000002: "API Not Implemented",
-	FATA000101: "Internal Server Error",
-	FATA001001: "Internal Server Error",
+	WBIZ000001: internalServerWarning,
+
+	FATA000001: internalServerError,
+	FATA000002: apiNotImplemented,
+	FATA000101: internalServerError,
+	FATA001001: internalServerError,
+	FATA002001: internalServerError,
 
 	// #endregion
 
