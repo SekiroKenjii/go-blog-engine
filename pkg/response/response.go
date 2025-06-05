@@ -15,16 +15,16 @@ type ErrorInner struct {
 type Response[T any] struct {
 	Message  string        `json:"message"`
 	Data     T             `json:"data"`
-	Warnings []any         `json:"warnings"`
-	Errors   *[]ErrorInner `json:"errors"`
+	Warnings []*any        `json:"warnings"`
+	Errors   []*ErrorInner `json:"errors"`
 }
 
 // Success constructs a successful response with the provided data and warnings.
 // It sends a JSON response with the specified status code and message.
-func Success[T any](c *gin.Context, statusCode int, msg string, data T, warnings []any) {
+func Success[T any](c *gin.Context, statusCode int, msg string, data *T, warnings []*any) {
 	c.JSON(statusCode, Response[T]{
 		Message:  msg,
-		Data:     data,
+		Data:     *data,
 		Warnings: warnings,
 		Errors:   nil,
 	})
@@ -32,7 +32,7 @@ func Success[T any](c *gin.Context, statusCode int, msg string, data T, warnings
 
 // Failure constructs an error response with the provided status code, error code, errors, and warnings.
 // It sends a JSON response with the specified status code and message.
-func Failure(c *gin.Context, statusCode int, errorCode ErrorCode, errors *[]ErrorInner, warnings []any) {
+func Failure(c *gin.Context, statusCode int, errorCode ErrorCode, errors []*ErrorInner, warnings []*any) {
 	c.AbortWithStatusJSON(statusCode, Response[any]{
 		Message:  messages[errorCode],
 		Data:     nil,
@@ -48,7 +48,7 @@ func NotImplemented(c *gin.Context) {
 		c,
 		http.StatusNotImplemented,
 		FATA000002,
-		&[]ErrorInner{
+		[]*ErrorInner{
 			{
 				Code:   string(FATA000002),
 				Source: map[string]string{},
@@ -60,8 +60,8 @@ func NotImplemented(c *gin.Context) {
 
 // DefaultValidatorError returns a default error response for validation errors.
 // It contains a generic error message indicating an invalid request.
-func DefaultValidatorError() *[]ErrorInner {
-	return &[]ErrorInner{
+func DefaultValidatorError() []*ErrorInner {
+	return []*ErrorInner{
 		{
 			Code: "",
 			Source: map[string]string{
@@ -79,7 +79,7 @@ func TooManyRequest(c *gin.Context) {
 		c,
 		http.StatusTooManyRequests,
 		ESYS000010,
-		&[]ErrorInner{
+		[]*ErrorInner{
 			{
 				Code: string(ESYS000010),
 				Source: map[string]string{
@@ -99,7 +99,7 @@ func AuthorizationHeaderError(c *gin.Context) {
 		c,
 		http.StatusUnauthorized,
 		ESYS000011,
-		&[]ErrorInner{
+		[]*ErrorInner{
 			{Code: string(ESYS000011)},
 		},
 		nil,
@@ -119,7 +119,7 @@ func Forbidden(c *gin.Context, defaultErrorCode ...ErrorCode) {
 		c,
 		http.StatusForbidden,
 		errorCode,
-		&[]ErrorInner{
+		[]*ErrorInner{
 			{
 				Code: string(errorCode),
 			},
@@ -138,7 +138,7 @@ func HandleBizFailure(c *gin.Context, code ErrorCode, defaultStatusCode ...int) 
 		Message:  errorMsg,
 		Data:     nil,
 		Warnings: nil,
-		Errors: &[]ErrorInner{
+		Errors: []*ErrorInner{
 			{
 				Code:   errorCode,
 				Source: map[string]string{"message": errorMsg},

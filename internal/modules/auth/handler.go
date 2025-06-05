@@ -89,7 +89,7 @@ func (h *Handler) Login(c *gin.Context) {
 		c,
 		http.StatusOK,
 		"User logged in successfully",
-		AuthResponse{
+		&AuthResponse{
 			AccessToken:  tokenPair.AccessToken,
 			RefreshToken: tokenPair.RefreshToken,
 		},
@@ -134,7 +134,7 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		c,
 		http.StatusOK,
 		"Token refreshed successfully",
-		AuthResponse{
+		&AuthResponse{
 			AccessToken:  tokenPair.AccessToken,
 			RefreshToken: tokenPair.RefreshToken,
 		},

@@ -14,16 +14,16 @@ type FieldErrorCallback func(f goValidator.FieldError) (string, string)
 
 // ValidateRequest validates the incoming JSON request body against the provided struct type T.
 // It returns a slice of validation errors if any validation fails, or nil if the request is valid.
-func ValidateRequest[T any](c *gin.Context, req *T) *[]response.ErrorInner {
+func ValidateRequest[T any](c *gin.Context, req *T) []*response.ErrorInner {
 	if err := c.ShouldBindJSON(&req); err != nil {
-		var result []response.ErrorInner
+		var result []*response.ErrorInner
 		var val goValidator.ValidationErrors
 
 		if errors.As(err, &val) {
 			for _, f := range val {
 				msg, code := getValidateMsgCode(f)
 
-				result = append(result, response.ErrorInner{
+				result = append(result, &response.ErrorInner{
 					Code: string(code),
 					Source: map[string]string{
 						"field":    f.Field(),
@@ -32,7 +32,7 @@ func ValidateRequest[T any](c *gin.Context, req *T) *[]response.ErrorInner {
 				})
 			}
 
-			return &result
+			return result
 		}
 
 		return response.DefaultValidatorError()
