@@ -26,20 +26,20 @@ func NewAuthService() IAuthService {
 	return &AuthService{
 		repo:     db.RepositoryInstance(),
 		tokenMgr: TokenManagerInstance(),
-		cacheSvc: cache.CacheServiceInstance(),
+		cacheSvc: cache.NewCacheService(),
 	}
 }
 
 // Register implements IAuthService.
-func (s *AuthService) Register(ctx context.Context, email, firstName, lastName, password string) response.ErrorCode {
+func (s *AuthService) Register(ctx context.Context, email, firstName, lastName, password string) (string, response.ErrorCode) {
 	hashedPwd, err := utils.HashPassword(password)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error occurred during a cryptographic operation: %v", err))
 
-		return response.FATA000101
+		return "", response.FATA000101
 	}
 
-	_, err = s.repo.CreateUser(ctx, dbCtx.CreateUserParams{
+	u, err := s.repo.CreateUser(ctx, dbCtx.CreateUserParams{
 		ID:           utils.GenerateULID(nil),
 		Email:        email,
 		FirstName:    firstName,
@@ -49,10 +49,10 @@ func (s *AuthService) Register(ctx context.Context, email, firstName, lastName, 
 	if err != nil {
 		logger.Error(fmt.Sprintf("Create user operation failed: %v", err))
 
-		return response.EBIZ000001
+		return "", response.EBIZ000001
 	}
 
-	return response.SBIZ000001
+	return u.ID, response.SBIZ000001
 }
 
 // Login implements IAuthService.
@@ -218,21 +218,33 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) response.Er
 }
 
 // ResendVerificationEmail implements IAuthService.
-func (s *AuthService) SendVerificationEmail(context.Context, string) response.ErrorCode {
-	panic("unimplemented")
+func (s *AuthService) SendVerificationEmail(ctx context.Context, email, userID string) response.ErrorCode {
+	err := s.cacheSvc.Set(ctx, fmt.Sprintf("email_verification:%s", userID), userID, 24*60*60)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to set email verification token in cache: %v", err))
+
+		return response.FATA002001
+	}
+
+	// TODO: Implement sending verification email logic
+
+	return response.SBIZ000001
 }
 
 // SendPasswordResetEmail implements IAuthService.
 func (s *AuthService) SendPasswordResetEmail(context.Context, string) response.ErrorCode {
-	panic("unimplemented")
+	// TODO: Implement sending password reset email logic
+	return response.SBIZ000001
 }
 
 // VerifyPasswordResetToken implements IAuthService.
 func (s *AuthService) VerifyPasswordResetToken(context.Context, string, string) response.ErrorCode {
-	panic("unimplemented")
+	// TODO: Implement verifying password reset token logic
+	return response.SBIZ000001
 }
 
 // ResetPassword implements IAuthService.
 func (s *AuthService) ResetPassword(context.Context, string, string, string) response.ErrorCode {
-	panic("unimplemented")
+	// TODO: Implement resetting password logic
+	return response.SBIZ000001
 }

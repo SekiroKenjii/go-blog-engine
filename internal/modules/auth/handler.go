@@ -48,11 +48,17 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if bizErrCode := h.service.Register(c.Request.Context(), req.Email, req.FirstName, req.LastName, req.Password); bizErrCode != response.SBIZ000001 {
+	userID, bizErrCode := h.service.Register(c.Request.Context(), req.Email, req.FirstName, req.LastName, req.Password)
+	if bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
 
 		return
 	}
+
+	// don't response error if email sending fails
+	// this is to ensure user registration is successful even if email verification fails
+	// if email sending fails, user can request a new verification email later
+	_ = h.service.SendVerificationEmail(c.Request.Context(), req.Email, userID)
 
 	response.Success[any](c, http.StatusCreated, "User registered successfully", nil, nil)
 }

@@ -24,8 +24,8 @@ type IAuthHandler interface {
 type IAuthService interface {
 	// Register allows a new user to create an account with their email, first name, last name, and password.
 	// It hashes the password before storing it in the database.
-	// Returns an error code indicating the success or failure of the operation.
-	Register(context.Context, string, string, string, string) response.ErrorCode
+	// Returns a user ID if registration is successful, or an error code if it fails.
+	Register(context.Context, string, string, string, string) (string, response.ErrorCode)
 
 	// Login allows a user to authenticate using their email and password, generating a token pair upon successful login.
 	// It also deletes any existing refresh token for the user on the specified device before generating a new one.
@@ -47,9 +47,9 @@ type IAuthService interface {
 	VerifyEmail(context.Context, string) response.ErrorCode
 
 	// SendVerificationEmail allows users to send a verification email.
-	// It takes a context and the user's email address.
+	// It takes a context, the user's email address, and the user's ID.
 	// Returns an error code indicating the success or failure of the operation.
-	SendVerificationEmail(context.Context, string) response.ErrorCode
+	SendVerificationEmail(context.Context, string, string) response.ErrorCode
 
 	// SendPasswordResetEmail allows users to initiate a password reset process by sending a reset email.
 	// It takes a context and the user's email address.

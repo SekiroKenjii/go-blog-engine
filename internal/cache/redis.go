@@ -23,6 +23,7 @@ var (
 	redisOnce       sync.Once
 )
 
+// RedisInstance returns a singleton instance of the Redis client.
 func RedisInstance() *redis.Client {
 	redisOnce.Do(func() {
 		handlePanic()
@@ -33,6 +34,7 @@ func RedisInstance() *redis.Client {
 	return redisInstance
 }
 
+// newRedisClient initializes a new Redis client using Sentinel configuration.
 func newRedisClient() *redis.Client {
 	redisConf := config.Instance().Redis
 
@@ -71,6 +73,7 @@ func newRedisClient() *redis.Client {
 	return rdb
 }
 
+// handlePanic recovers from panics that occur during Redis operations.
 func handlePanic() {
 	defer func() {
 		if r := recover(); r != nil {
