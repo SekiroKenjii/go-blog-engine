@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification - Go Blog Engine</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Go Blog Engine</div>
+        </div>
+
+        <h2>Welcome, {{.FirstName}}!</h2>
+
+        <p>Thank you for registering with Go Blog Engine. To complete your registration and start blogging, please verify your email address by clicking the button below:</p>
+
+        <div style="text-align: center;">
+            <a href="{{.VerificationURL}}" class="button">Verify Email Address</a>
+        </div>
+
+        <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #3498db;">{{.VerificationURL}}</p>
+
+        <p><strong>This link will expire in 24 hours for security reasons.</strong></p>
+
+        <p>If you didn't create an account with Go Blog Engine, please ignore this email.</p>
+
+        <div class="footer">
+            <p>Best regards,<br>The Go Blog Engine Team</p>
+            <p><a href="{{.BaseURL}}" style="color: #3498db;">Visit Go Blog Engine</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -39,3 +39,11 @@ rabbitmq:
   port:
   user:
   password:
+email:
+  smtp_host: # e.g., smtp.gmail.com
+  smtp_port: # e.g., 587
+  username: # your email username
+  password: # your email password or app-specific password
+  from_email: # the email address to send from
+  from_name: # the display name for emails (e.g., "Go Blog Engine")
+  template_dir: # path to email templates (default: ./templates/emails)

@@ -3,8 +3,12 @@ package utils
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -120,4 +124,89 @@ func ParseUUID(id string) (uuid.UUID, error) {
 	}
 
 	return parsed, nil
+}
+
+// GenerateSecureToken generates a cryptographically secure random token
+func GenerateSecureToken(length int) (string, error) {
+	bytes := make([]byte, length)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate secure token: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
+}
+
+// SecureCompare performs constant-time comparison of two strings
+func SecureCompare(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
+
+// SanitizeEmail normalizes and validates email format
+func SanitizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+// ExtractIPAddress extracts the real IP address from request
+func ExtractIPAddress(r *http.Request) string {
+	// Check X-Forwarded-For header
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
+	}
+
+	// Check X-Real-IP header
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return strings.TrimSpace(xri)
+	}
+
+	// Fall back to RemoteAddr
+	ip := r.RemoteAddr
+	if idx := strings.LastIndex(ip, ":"); idx != -1 {
+		ip = ip[:idx]
+	}
+	return ip
+}
+
+// IsPasswordSecure checks if password meets security requirements
+func IsPasswordSecure(password string) (bool, []string) {
+	var issues []string
+
+	if len(password) < 8 {
+		issues = append(issues, "Password must be at least 8 characters long")
+	}
+
+	hasUpper := false
+	hasLower := false
+	hasDigit := false
+	hasSpecial := false
+
+	for _, char := range password {
+		switch {
+		case char >= 'A' && char <= 'Z':
+			hasUpper = true
+		case char >= 'a' && char <= 'z':
+			hasLower = true
+		case char >= '0' && char <= '9':
+			hasDigit = true
+		case strings.ContainsRune("!@#$%^&*()_+-=[]{}|;:,.<>?", char):
+			hasSpecial = true
+		}
+	}
+
+	if !hasUpper {
+		issues = append(issues, "Password must contain at least one uppercase letter")
+	}
+	if !hasLower {
+		issues = append(issues, "Password must contain at least one lowercase letter")
+	}
+	if !hasDigit {
+		issues = append(issues, "Password must contain at least one digit")
+	}
+	if !hasSpecial {
+		issues = append(issues, "Password must contain at least one special character")
+	}
+
+	return len(issues) == 0, issues
 }

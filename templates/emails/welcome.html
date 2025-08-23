@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Go Blog Engine</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #27ae60;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #229954;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #c3e6cb;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Go Blog Engine</div>
+        </div>
+
+        <h2>Welcome to Go Blog Engine, {{.FirstName}}! 🎉</h2>
+
+        <div class="success">
+            <strong>🎉 Congratulations!</strong> Your email has been successfully verified and your account is now active.
+        </div>
+
+        <p>Thank you for joining our community of bloggers! You can now:</p>
+
+        <ul>
+            <li>✍️ Create and publish blog posts</li>
+            <li>📝 Edit and manage your content</li>
+            <li>👥 Connect with other bloggers</li>
+            <li>📊 Track your blog's performance</li>
+        </ul>
+
+        <div style="text-align: center;">
+            <a href="{{.BaseURL}}" class="button">Start Blogging Now</a>
+        </div>
+
+        <p>If you have any questions or need help getting started, feel free to reach out to our support team.</p>
+
+        <div class="footer">
+            <p>Happy blogging!<br>The Go Blog Engine Team</p>
+            <p><a href="{{.BaseURL}}" style="color: #3498db;">Visit Go Blog Engine</a></p>
+        </div>
+    </div>
+</body>
+</html>

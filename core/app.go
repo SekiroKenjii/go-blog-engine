@@ -11,15 +11,17 @@ import (
 	"github.com/SekiroKenjii/go-blog-engine/config"
 	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
 	"github.com/SekiroKenjii/go-blog-engine/internal/cache"
+	"github.com/SekiroKenjii/go-blog-engine/internal/modules/mailers"
 	"github.com/SekiroKenjii/go-blog-engine/internal/router"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
 
 type Application struct {
-	config *config.Config
-	redis  *redis.Client
-	router abstract.IRouter
+	config      *config.Config
+	redis       *redis.Client
+	router      abstract.IRouter
+	emailWorker *mailers.StrategicEmailWorker
 }
 
 // Bootstrap initializes the application components such as configuration, Redis cache, and router.
@@ -30,12 +32,24 @@ func Bootstrap() *Application {
 	redis := cache.RedisInstance()
 	router := router.NewRouter()
 
+	// Initialize strategic email worker with configuration
+	factory := mailers.NewMailerFactory(cfg)
+	_, emailWorker, err := factory.CreateStrategicMailerSystem()
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to initialize strategic email worker: %v", err))
+		panic("Failed to initialize strategic email worker: " + err.Error())
+	}
+
+	// Start email worker
+	emailWorker.Start()
+
 	logger.Info("Application startup complete.")
 
 	return &Application{
-		config: cfg,
-		redis:  redis,
-		router: router,
+		config:      cfg,
+		redis:       redis,
+		router:      router,
+		emailWorker: emailWorker,
 	}
 }
 
@@ -77,6 +91,12 @@ func (a *Application) Shutdown(httpSrv *http.Server, done chan bool) {
 	<-ctx.Done()
 
 	logger.Info("Shutting down Server...")
+
+	// Stop email worker first
+	if a.emailWorker != nil {
+		logger.Info("Stopping email worker...")
+		a.emailWorker.Stop()
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

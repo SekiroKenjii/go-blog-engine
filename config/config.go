@@ -19,6 +19,7 @@ type Config struct {
 	Security *SecurityConfig `mapstructure:"security"`
 	Redis    *RedisConfig    `mapstructure:"redis"`
 	RabbitMQ *RabbitMQConfig `mapstructure:"rabbitmq"`
+	Email    *EmailConfig    `mapstructure:"email"`
 }
 
 func Instance() *Config {

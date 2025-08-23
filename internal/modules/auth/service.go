@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SekiroKenjii/go-blog-engine/config"
 	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
 	"github.com/SekiroKenjii/go-blog-engine/internal/cache"
 	"github.com/SekiroKenjii/go-blog-engine/internal/db"
+	"github.com/SekiroKenjii/go-blog-engine/internal/modules/mailers"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/logger"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/utils"
@@ -17,16 +19,36 @@ import (
 )
 
 type AuthService struct {
-	repo     *db.Repository
-	tokenMgr ITokenManager
-	cacheSvc abstract.ICacheService
+	repo            *db.Repository
+	tokenMgr        ITokenManager
+	cacheSvc        abstract.ICacheService
+	strategicMailer *mailers.StrategicMailer
 }
 
+const (
+	CryptographicOperationError = "Error occurred during a cryptographic operation"
+	LogMessageFormat            = "%s: %v"
+	EmailVerificationPrefix     = "email_verification:%s"
+	PasswordResetPrefix         = "password_reset:%s"
+
+	// Token expiration times
+	EmailVerificationExpiry = 24 * time.Hour
+	PasswordResetExpiry     = 1 * time.Hour
+)
+
 func NewAuthService() IAuthService {
+	cfg := config.Instance()
+	factory := mailers.NewMailerFactory(cfg)
+	strategicMailer, _, err := factory.CreateStrategicMailerSystem()
+	if err != nil {
+		panic("Failed to create strategic mailer system: " + err.Error())
+	}
+
 	return &AuthService{
-		repo:     db.RepositoryInstance(),
-		tokenMgr: TokenManagerInstance(),
-		cacheSvc: cache.NewCacheService(),
+		repo:            db.RepositoryInstance(),
+		tokenMgr:        TokenManagerInstance(),
+		cacheSvc:        cache.NewCacheService(),
+		strategicMailer: strategicMailer,
 	}
 }
 
@@ -34,7 +56,7 @@ func NewAuthService() IAuthService {
 func (s *AuthService) Register(ctx context.Context, email, firstName, lastName, password string) (string, response.ErrorCode) {
 	hashedPwd, err := utils.HashPassword(password)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error occurred during a cryptographic operation: %v", err))
+		logger.Error(fmt.Sprintf(LogMessageFormat, CryptographicOperationError, err))
 
 		return "", response.FATA000101
 	}
@@ -76,7 +98,7 @@ func (s *AuthService) Login(ctx context.Context, email, password, deviceID, ip, 
 
 	token, err := s.tokenMgr.GenerateTokenPair(user.ID)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error occurred during a cryptographic operation: %v", err))
+		logger.Error(fmt.Sprintf(LogMessageFormat, CryptographicOperationError, err))
 
 		return nil, response.FATA000101
 	}
@@ -133,7 +155,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, UserID, refreshToken str
 
 	newAccessToken, newAccessTokenExpires, err := s.tokenMgr.GenerateAccessToken(UserID)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error occurred during a cryptographic operation: %v", err))
+		logger.Error(fmt.Sprintf(LogMessageFormat, CryptographicOperationError, err))
 
 		return nil, response.FATA000101
 	}
@@ -194,15 +216,15 @@ func (s *AuthService) Logout(ctx context.Context, userID, deviceID, refreshToken
 
 // VerifyEmail implements IAuthService.
 func (s *AuthService) VerifyEmail(ctx context.Context, token string) response.ErrorCode {
-	userID, err := s.cacheSvc.Get(ctx, fmt.Sprintf("email_verification:%s", token))
+	userID, err := s.cacheSvc.Get(ctx, fmt.Sprintf(EmailVerificationPrefix, token))
 	if err != nil || userID == "" {
 		logger.Error(fmt.Sprintf("Failed to retrieve email verification token: %v", err))
 
-		return response.EBIZ000007
+		return response.EBIZ001005
 	}
 
 	// Try to delete the verification token from cache
-	if err := s.cacheSvc.Delete(ctx, fmt.Sprintf("email_verification:%s", token)); err != nil {
+	if err := s.cacheSvc.Delete(ctx, fmt.Sprintf(EmailVerificationPrefix, token)); err != nil {
 		logger.Error(fmt.Sprintf("Failed to delete email verification token from cache: %v", err))
 
 		return response.FATA002001
@@ -214,37 +236,177 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) response.Er
 		return response.FATA001001
 	}
 
+	// Send welcome email after successful verification (async)
+	user, err := s.repo.GetUserByID(ctx, userID)
+	if err == nil {
+		params := map[string]interface{}{
+			"firstName": user.FirstName,
+		}
+		_ = s.strategicMailer.SendEmailAsync(ctx, mailers.Strategies.Welcome(), user.Email, params)
+	}
+
 	return response.SBIZ000001
 }
 
-// ResendVerificationEmail implements IAuthService.
+// SendVerificationEmail implements IAuthService.
 func (s *AuthService) SendVerificationEmail(ctx context.Context, email, userID string) response.ErrorCode {
-	err := s.cacheSvc.Set(ctx, fmt.Sprintf("email_verification:%s", userID), userID, 24*60*60)
+	// Generate a secure verification token using enhanced crypto utils
+	token, err := utils.GenerateSecureToken(32)
+	if err != nil {
+		logger.Error(fmt.Sprintf(LogMessageFormat, CryptographicOperationError, err))
+		return response.FATA000101
+	}
+
+	// Store token in cache with expiration
+	err = s.cacheSvc.Set(ctx, fmt.Sprintf(EmailVerificationPrefix, token), userID, int(EmailVerificationExpiry.Seconds()))
 	if err != nil {
 		logger.Error(fmt.Sprintf("Failed to set email verification token in cache: %v", err))
-
 		return response.FATA002001
 	}
 
-	// TODO: Implement sending verification email logic
+	// Get user details for email
+	user, err := s.repo.GetUserByID(ctx, userID)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to get user details for email: %v", err))
+		return response.FATA001001
+	}
+
+	// Send verification email (async)
+	params := map[string]interface{}{
+		"token":     token,
+		"firstName": user.FirstName,
+	}
+	_ = s.strategicMailer.SendEmailAsync(ctx, mailers.Strategies.Verification(), user.Email, params)
+	logger.Info(fmt.Sprintf("Verification email queued for sending to: %s", user.Email))
 
 	return response.SBIZ000001
-}
+} // SendPasswordResetEmail implements IAuthService.
+func (s *AuthService) SendPasswordResetEmail(ctx context.Context, email string) response.ErrorCode {
+	// First check if user exists
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		// For security reasons, don't reveal if email exists or not
+		logger.Info(fmt.Sprintf("Password reset requested for non-existent email: %s", email))
+		return response.SBIZ000001
+	}
 
-// SendPasswordResetEmail implements IAuthService.
-func (s *AuthService) SendPasswordResetEmail(context.Context, string) response.ErrorCode {
-	// TODO: Implement sending password reset email logic
+	// Delete any existing password reset tokens for this user
+	if err := s.repo.DeletePasswordResetTokensByUser(ctx, user.ID); err != nil {
+		logger.Error(fmt.Sprintf("Failed to delete existing password reset tokens: %v", err))
+	}
+
+	// Generate secure reset token using enhanced crypto utils
+	token, err := utils.GenerateSecureToken(32)
+	if err != nil {
+		logger.Error(fmt.Sprintf(LogMessageFormat, CryptographicOperationError, err))
+		return response.FATA000101
+	}
+
+	tokenHash := utils.HashSHA256(token)
+
+	// Store token in database with expiration
+	expiresAt := time.Now().Add(PasswordResetExpiry)
+	err = s.repo.StorePasswordResetToken(ctx, dbCtx.StorePasswordResetTokenParams{
+		UserID:    user.ID,
+		TokenHash: tokenHash,
+		ExpiresAt: expiresAt,
+	})
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to store password reset token: %v", err))
+		return response.FATA001001
+	}
+
+	// Send password reset email (async)
+	params := map[string]interface{}{
+		"token":     token,
+		"firstName": user.FirstName,
+		"email":     user.Email,
+	}
+	_ = s.strategicMailer.SendEmailAsync(ctx, mailers.Strategies.PasswordReset(), user.Email, params)
+	logger.Info(fmt.Sprintf("Password reset email queued for sending to: %s", user.Email))
+
 	return response.SBIZ000001
 }
 
 // VerifyPasswordResetToken implements IAuthService.
-func (s *AuthService) VerifyPasswordResetToken(context.Context, string, string) response.ErrorCode {
-	// TODO: Implement verifying password reset token logic
+func (s *AuthService) VerifyPasswordResetToken(ctx context.Context, email, token string) response.ErrorCode {
+	// Verify user exists
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		logger.Error("Password reset token verification failed: user not found")
+		return response.EBIZ001006
+	}
+
+	// Get and validate token
+	tokenHash := utils.HashSHA256(token)
+	dbToken, err := s.repo.GetPasswordResetToken(ctx, tokenHash)
+	if err != nil {
+		logger.Error("Password reset token verification failed: invalid token")
+		return response.EBIZ001006
+	}
+
+	// Verify token belongs to the correct user
+	if dbToken.UserID != user.ID {
+		logger.Error("Password reset token verification failed: token user mismatch")
+		return response.EBIZ001006
+	}
+
+	// Token is valid
 	return response.SBIZ000001
 }
 
 // ResetPassword implements IAuthService.
-func (s *AuthService) ResetPassword(context.Context, string, string, string) response.ErrorCode {
-	// TODO: Implement resetting password logic
+func (s *AuthService) ResetPassword(ctx context.Context, email, newPassword, token string) response.ErrorCode {
+	// Verify user exists
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		logger.Error("Password reset failed: user not found")
+		return response.EBIZ001006
+	}
+
+	// Get and validate token
+	tokenHash := utils.HashSHA256(token)
+	dbToken, err := s.repo.GetPasswordResetToken(ctx, tokenHash)
+	if err != nil {
+		logger.Error("Password reset failed: invalid token")
+		return response.EBIZ001006
+	}
+
+	// Verify token belongs to the correct user
+	if dbToken.UserID != user.ID {
+		logger.Error("Password reset failed: token user mismatch")
+		return response.EBIZ001006
+	}
+
+	// Hash the new password
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		logger.Error(fmt.Sprintf(LogMessageFormat, CryptographicOperationError, err))
+		return response.FATA000101
+	}
+
+	// Update user password
+	err = s.repo.UpdateUserPassword(ctx, dbCtx.UpdateUserPasswordParams{
+		ID:           user.ID,
+		PasswordHash: hashedPassword,
+	})
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to update user password: %v", err))
+		return response.FATA001001
+	}
+
+	// Mark token as used
+	if err := s.repo.MarkPasswordResetTokenUsed(ctx, tokenHash); err != nil {
+		logger.Error(fmt.Sprintf("Failed to mark password reset token as used: %v", err))
+		// Don't fail the operation, just log the error
+	}
+
+	// Delete all refresh tokens for this user to force re-login
+	if err := s.repo.DeleteRefreshTokensByUser(ctx, user.ID); err != nil {
+		logger.Error(fmt.Sprintf("Failed to delete refresh tokens for user %s: %v", user.ID, err))
+		// Don't fail the operation, just log the error
+	}
+
+	logger.Info(fmt.Sprintf("Password successfully reset for user %s", user.ID))
 	return response.SBIZ000001
 }

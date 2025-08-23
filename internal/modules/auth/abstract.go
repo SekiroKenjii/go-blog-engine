@@ -18,6 +18,9 @@ type IAuthHandler interface {
 	RefreshToken(*gin.Context)
 	Logout(*gin.Context)
 	VerifyEmail(*gin.Context)
+	SendVerificationEmail(*gin.Context)
+	SendPasswordReset(*gin.Context)
+	VerifyPasswordResetToken(*gin.Context)
 	ResetPassword(*gin.Context)
 }
 

@@ -11,16 +11,6 @@ import (
 	"time"
 )
 
-const deleteAllRefreshTokensForUser = `-- name: DeleteAllRefreshTokensForUser :exec
-DELETE FROM refresh_tokens
-WHERE user_id = $1
-`
-
-func (q *Queries) DeleteAllRefreshTokensForUser(ctx context.Context, userID string) error {
-	_, err := q.db.ExecContext(ctx, deleteAllRefreshTokensForUser, userID)
-	return err
-}
-
 const deleteRefreshToken = `-- name: DeleteRefreshToken :exec
 DELETE FROM refresh_tokens
 WHERE user_id = $1 AND token_hash = $2
@@ -51,9 +41,21 @@ func (q *Queries) DeleteRefreshTokenByDevice(ctx context.Context, arg DeleteRefr
 	return err
 }
 
+const deleteRefreshTokensByUser = `-- name: DeleteRefreshTokensByUser :exec
+DELETE FROM refresh_tokens
+WHERE user_id = $1
+`
+
+func (q *Queries) DeleteRefreshTokensByUser(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deleteRefreshTokensByUser, userID)
+	return err
+}
+
 const getRefreshToken = `-- name: GetRefreshToken :one
-SELECT id, user_id, token_hash, expires_at, created_at, device_id, ip, user_agent FROM refresh_tokens
+SELECT user_id, token_hash, device_id, expires_at, created_at
+FROM refresh_tokens
 WHERE user_id = $1 AND token_hash = $2
+LIMIT 1
 `
 
 type GetRefreshTokenParams struct {
@@ -61,18 +63,23 @@ type GetRefreshTokenParams struct {
 	TokenHash string `json:"token_hash"`
 }
 
-func (q *Queries) GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams) (RefreshToken, error) {
+type GetRefreshTokenRow struct {
+	UserID    string       `json:"user_id"`
+	TokenHash string       `json:"token_hash"`
+	DeviceID  string       `json:"device_id"`
+	ExpiresAt time.Time    `json:"expires_at"`
+	CreatedAt sql.NullTime `json:"created_at"`
+}
+
+func (q *Queries) GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams) (GetRefreshTokenRow, error) {
 	row := q.db.QueryRowContext(ctx, getRefreshToken, arg.UserID, arg.TokenHash)
-	var i RefreshToken
+	var i GetRefreshTokenRow
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
 		&i.TokenHash,
+		&i.DeviceID,
 		&i.ExpiresAt,
 		&i.CreatedAt,
-		&i.DeviceID,
-		&i.Ip,
-		&i.UserAgent,
 	)
 	return i, err
 }

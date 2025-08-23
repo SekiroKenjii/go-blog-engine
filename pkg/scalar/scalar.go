@@ -16,14 +16,14 @@ func safeJSONConfiguration(options *Options) string {
 	return escapedJSON
 }
 
-func specContentHandler(specContent interface{}) string {
+func specContentHandler(specContent any) string {
 	switch spec := specContent.(type) {
-	case func() map[string]interface{}:
+	case func() map[string]any:
 		// If specContent is a function, it calls the function and serializes the return
 		result := spec()
 		jsonData, _ := json.Marshal(result)
 		return string(jsonData)
-	case map[string]interface{}:
+	case map[string]any:
 		// If specContent is a map, it serializes it directly
 		jsonData, _ := json.Marshal(spec)
 		return string(jsonData)

@@ -32,6 +32,14 @@ const (
 	EBIZ001003 ErrorCode = "EBIZ001003"
 	// Error: User Refresh Token Expired or unauthenticated user
 	EBIZ001004 ErrorCode = "EBIZ001004"
+	// Error: Email verification token invalid or expired
+	EBIZ001005 ErrorCode = "EBIZ001005"
+	// Error: Password reset token invalid or expired
+	EBIZ001006 ErrorCode = "EBIZ001006"
+	// Error: User account not verified
+	EBIZ001007 ErrorCode = "EBIZ001007"
+	// Error: User account is locked
+	EBIZ001008 ErrorCode = "EBIZ001008"
 
 	// Fatal: Rate Limit Exceeded
 	ESYS000010 ErrorCode = "ESYS000010"
@@ -85,6 +93,10 @@ var messages = map[ErrorCode]string{
 	EBIZ001002: invalidUserCredentials,
 	EBIZ001003: invalidUserCredentials,
 	EBIZ001004: invalidUserCredentials,
+	EBIZ001005: invalidUserCredentials,
+	EBIZ001006: invalidUserCredentials,
+	EBIZ001007: invalidUserCredentials,
+	EBIZ001008: invalidUserCredentials,
 
 	ESYS000010: rateLimitExceeded,
 	ESYS000011: authenticationRequired,

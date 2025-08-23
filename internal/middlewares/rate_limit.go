@@ -7,10 +7,13 @@ import (
 
 	"github.com/SekiroKenjii/go-blog-engine/pkg/logger"
 	"github.com/SekiroKenjii/go-blog-engine/pkg/response"
+	"github.com/SekiroKenjii/go-blog-engine/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 )
+
+const rateLimitExceededMsg = "Rate limit exceeded"
 
 type visitor struct {
 	limiter  *rate.Limiter
@@ -82,7 +85,72 @@ func startCleanup(ctx context.Context, ttl, interval time.Duration) {
 	}
 }
 
-func RateLimit() gin.HandlerFunc {
+// RateLimitWithConfig creates a rate limiter with custom configuration
+func RateLimitWithConfig(requestsPerSecond float64, burstSize int) gin.HandlerFunc {
+	logger := logger.Instance()
+	visitors := make(map[string]*visitor)
+	visitorsMux := sync.Mutex{}
+	ctx := context.Background()
+
+	// Custom cleanup function for this instance
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				visitorsMux.Lock()
+				now := time.Now()
+				for key, v := range visitors {
+					if now.Sub(v.lastSeen) > 3*time.Minute {
+						delete(visitors, key)
+					}
+				}
+				visitorsMux.Unlock()
+			}
+		}
+	}()
+
+	return func(c *gin.Context) {
+		clientIP := utils.ExtractIPAddress(c.Request)
+
+		visitorsMux.Lock()
+		v, exists := visitors[clientIP]
+		if !exists {
+			v = &visitor{
+				limiter:  rate.NewLimiter(rate.Limit(requestsPerSecond), burstSize),
+				lastSeen: time.Now(),
+			}
+			visitors[clientIP] = v
+		}
+		v.lastSeen = time.Now()
+		visitorsMux.Unlock()
+
+		if !v.limiter.Allow() {
+			logger.Warn(rateLimitExceededMsg,
+				zap.String("ip", clientIP),
+				zap.String("path", c.Request.URL.Path),
+				zap.Float64("rate", requestsPerSecond),
+				zap.Int("burst", burstSize))
+			response.TooManyRequest(c)
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// AuthRateLimit provides stricter rate limiting for authentication endpoints
+func AuthRateLimit() gin.HandlerFunc {
+	// 5 requests per minute for auth endpoints
+	return RateLimitWithConfig(5.0/60.0, 5)
+}
+
+// RateLimitExcludingPaths creates a rate limiter that excludes specific path prefixes
+func RateLimitExcludingPaths(excludePaths ...string) gin.HandlerFunc {
 	logger := logger.Instance()
 	ctx := context.Background()
 
@@ -91,12 +159,23 @@ func RateLimit() gin.HandlerFunc {
 	go startCleanup(ctx, 3*time.Minute, 1*time.Minute)
 
 	return func(c *gin.Context) {
-		v := getVisitor(c.ClientIP(), c.Request.Method)
+		// Check if the current path should be excluded
+		currentPath := c.Request.URL.Path
+		for _, excludePath := range excludePaths {
+			if len(currentPath) >= len(excludePath) && currentPath[:len(excludePath)] == excludePath {
+				// Skip rate limiting for this path
+				c.Next()
+				return
+			}
+		}
+
+		// Use enhanced IP extraction
+		clientIP := utils.ExtractIPAddress(c.Request)
+		v := getVisitor(clientIP, c.Request.Method)
 
 		if !v.limiter.Allow() {
-			logger.Warn("Rate limit exceeded", zap.String("ip", c.ClientIP()), zap.String("path", c.Request.URL.Path))
+			logger.Warn(rateLimitExceededMsg, zap.String("ip", clientIP), zap.String("path", c.Request.URL.Path))
 			response.TooManyRequest(c)
-
 			return
 		}
 

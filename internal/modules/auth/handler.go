@@ -19,16 +19,23 @@ func NewAuthHandler() IAuthHandler {
 	return &Handler{service: NewAuthService()}
 }
 
-// RegisterRoutes implements IAuthHandler.
-func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
-	auth := rg.Group("/auth")
+// RegisterPublicRoutes registers authentication routes that don't require authentication.
+func (h *Handler) RegisterPublicRoutes(rg *gin.RouterGroup) {
+	// Public routes - no authentication required
+	rg.POST("/register", h.Register)
+	rg.POST("/login", h.Login)
+	rg.GET("/verify-email", h.VerifyEmail)
+	rg.POST("/send-password-reset", h.SendPasswordReset)
+	rg.POST("/verify-password-reset-token", h.VerifyPasswordResetToken)
+	rg.POST("/reset-password", h.ResetPassword)
+}
 
-	auth.POST("/register", h.Register)
-	auth.POST("/login", h.Login)
-	auth.POST("/refresh-token", h.RefreshToken)
-	auth.POST("/logout", h.Logout)
-	auth.POST("/verify-email", h.VerifyEmail)
-	auth.POST("/reset-password", h.ResetPassword)
+// RegisterProtectedRoutes registers authentication routes that require authentication.
+func (h *Handler) RegisterProtectedRoutes(rg *gin.RouterGroup) {
+	// Protected routes - authentication required
+	rg.POST("/refresh-token", h.RefreshToken)
+	rg.POST("/logout", h.Logout)
+	rg.POST("/send-verification-email", h.SendVerificationEmail)
 }
 
 // Register godoc
@@ -195,28 +202,125 @@ func (h *Handler) Logout(c *gin.Context) {
 // @Success     200 {object} response.Response[any] "Email verified successfully"
 // @Failure     400 {object} response.Response[any] "Validation error or email verification failed"
 // @Failure     500 {object} response.Response[any] "Internal server error"
-// @Router      /api/v1/auth/verify-email [post]
+// @Router      /api/v1/auth/verify-email [get]
 func (h *Handler) VerifyEmail(c *gin.Context) {
 	token := accessor.GetQueryParam(c, "token")
 	if token == "" {
-		response.Forbidden(c, response.EBIZ000006)
+		// Try to get from request body if not in query params
+		var req VerifyEmailRequest
+		if err := validator.ValidateRequest(c, &req); err == nil {
+			token = req.Token
+		}
+	}
 
+	if token == "" {
+		response.Failure(c, http.StatusBadRequest, response.EBIZ000006, []*response.ErrorInner{
+			{Code: string(response.EBIZ000006), Source: "Token is required"},
+		}, nil)
 		return
 	}
 
 	bizErrCode := h.service.VerifyEmail(c.Request.Context(), token)
 	if bizErrCode == response.FATA001001 || bizErrCode == response.FATA002001 {
-		// resend verification email if token verification fails
+		response.HandleBizFailure(c, bizErrCode, http.StatusInternalServerError)
 		return
 	}
 
 	if bizErrCode != response.SBIZ000001 {
 		response.HandleBizFailure(c, bizErrCode)
-
 		return
 	}
 
 	response.Success[any](c, http.StatusOK, "Email verified successfully", nil, nil)
+}
+
+// SendVerificationEmail godoc
+// @Summary     Send verification email
+// @Description Send verification email to user
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Success     200 {object} response.Response[any] "Verification email sent successfully"
+// @Failure     400 {object} response.Response[any] "Validation error"
+// @Failure     500 {object} response.Response[any] "Internal server error"
+// @Router      /api/v1/auth/send-verification-email [post]
+func (h *Handler) SendVerificationEmail(c *gin.Context) {
+	var req SendVerificationEmailRequest
+
+	if err := validator.ValidateRequest(c, &req); err != nil {
+		response.Failure(c, http.StatusBadRequest, response.EBIZ000002, err, nil)
+		return
+	}
+
+	// Get user by email to get user ID
+	user, err := h.service.(*AuthService).repo.GetUserByEmail(c.Request.Context(), req.Email)
+	if err != nil {
+		response.Failure(c, http.StatusBadRequest, response.EBIZ001000, []*response.ErrorInner{
+			{Code: string(response.EBIZ001000), Source: "User not found"},
+		}, nil)
+		return
+	}
+
+	bizErrCode := h.service.SendVerificationEmail(c.Request.Context(), req.Email, user.ID)
+	if bizErrCode != response.SBIZ000001 {
+		response.HandleBizFailure(c, bizErrCode)
+		return
+	}
+
+	response.Success[any](c, http.StatusOK, "Verification email sent successfully", nil, nil)
+}
+
+// SendPasswordReset godoc
+// @Summary     Send password reset email
+// @Description Send password reset email to user
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Success     200 {object} response.Response[any] "Password reset email sent successfully"
+// @Failure     400 {object} response.Response[any] "Validation error"
+// @Failure     500 {object} response.Response[any] "Internal server error"
+// @Router      /api/v1/auth/send-password-reset [post]
+func (h *Handler) SendPasswordReset(c *gin.Context) {
+	var req SendPasswordResetRequest
+
+	if err := validator.ValidateRequest(c, &req); err != nil {
+		response.Failure(c, http.StatusBadRequest, response.EBIZ000002, err, nil)
+		return
+	}
+
+	bizErrCode := h.service.SendPasswordResetEmail(c.Request.Context(), req.Email)
+	if bizErrCode != response.SBIZ000001 {
+		response.HandleBizFailure(c, bizErrCode)
+		return
+	}
+
+	response.Success[any](c, http.StatusOK, "Password reset email sent successfully", nil, nil)
+}
+
+// VerifyPasswordResetToken godoc
+// @Summary     Verify password reset token
+// @Description Verify password reset token validity
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Success     200 {object} response.Response[any] "Token is valid"
+// @Failure     400 {object} response.Response[any] "Validation error or invalid token"
+// @Router      /api/v1/auth/verify-password-reset-token [post]
+func (h *Handler) VerifyPasswordResetToken(c *gin.Context) {
+	var req VerifyPasswordResetTokenRequest
+
+	if err := validator.ValidateRequest(c, &req); err != nil {
+		response.Failure(c, http.StatusBadRequest, response.EBIZ000002, err, nil)
+		return
+	}
+
+	bizErrCode := h.service.VerifyPasswordResetToken(c.Request.Context(), req.Email, req.Token)
+	if bizErrCode != response.SBIZ000001 {
+		response.HandleBizFailure(c, bizErrCode)
+		return
+	}
+
+	response.Success[any](c, http.StatusOK, "Token is valid", nil, nil)
 }
 
 // ResetPassword godoc
@@ -231,5 +335,18 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 // @Failure     500 {object} response.Response[any] "Internal server error"
 // @Router      /api/v1/auth/reset-password [post]
 func (h *Handler) ResetPassword(c *gin.Context) {
-	response.NotImplemented(c)
+	var req ResetPasswordRequest
+
+	if err := validator.ValidateRequest(c, &req); err != nil {
+		response.Failure(c, http.StatusBadRequest, response.EBIZ000002, err, nil)
+		return
+	}
+
+	bizErrCode := h.service.ResetPassword(c.Request.Context(), req.Email, req.NewPassword, req.Token)
+	if bizErrCode != response.SBIZ000001 {
+		response.HandleBizFailure(c, bizErrCode)
+		return
+	}
+
+	response.Success[any](c, http.StatusOK, "Password reset successfully", nil, nil)
 }

@@ -62,6 +62,16 @@ type RabbitMQConfig struct {
 	Password string `mapstructure:"password"`
 }
 
+type EmailConfig struct {
+	SMTPHost    string `mapstructure:"smtp_host"`
+	SMTPPort    int    `mapstructure:"smtp_port"`
+	Username    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	FromEmail   string `mapstructure:"from_email"`
+	FromName    string `mapstructure:"from_name"`
+	TemplateDir string `mapstructure:"template_dir"`
+}
+
 // #endregion
 
 // #region Rules

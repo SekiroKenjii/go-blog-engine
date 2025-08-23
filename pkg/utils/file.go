@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const FileURLPrefix = "file://"
+
 // EnsureFileURL ensures that the provided file path is a valid file URL.
 // If the path is relative, it resolves it against the current working directory.
 // If the path is already a file URL, it checks if the path is absolute.
@@ -17,8 +19,8 @@ import (
 // It returns the file URL as a string or an error if any issues occur during the process.
 // The returned file URL will always start with "file://".
 func EnsureFileURL(filePath string) (string, error) {
-	if strings.HasPrefix(filePath, "file://") {
-		if path := strings.TrimPrefix(filePath, "file://"); !filepath.IsAbs(path) {
+	if after, ok := strings.CutPrefix(filePath, FileURLPrefix); ok {
+		if path := after; !filepath.IsAbs(path) {
 			currentDir, err := os.Getwd()
 			if err != nil {
 				return "", fmt.Errorf("error getting current directory: %w", err)
@@ -26,14 +28,14 @@ func EnsureFileURL(filePath string) (string, error) {
 
 			resolvedPath := filepath.Join(currentDir, path)
 
-			return "file://" + resolvedPath, nil
+			return FileURLPrefix + resolvedPath, nil
 		}
 
 		return filePath, nil
 	}
 
 	if filepath.IsAbs(filePath) {
-		return "file://" + filePath, nil
+		return FileURLPrefix + filePath, nil
 	}
 
 	currentDir, err := os.Getwd()
@@ -43,7 +45,7 @@ func EnsureFileURL(filePath string) (string, error) {
 
 	resolvedPath := filepath.Join(currentDir, filePath)
 
-	return "file://" + resolvedPath, nil
+	return FileURLPrefix + resolvedPath, nil
 }
 
 // FetchContentFromURL fetches the content from a given file URL.

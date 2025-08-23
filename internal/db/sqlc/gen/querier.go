@@ -11,17 +11,23 @@ import (
 type Querier interface {
 	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	DeleteAllRefreshTokensForUser(ctx context.Context, userID string) error
+	DeleteExpiredPasswordResetTokens(ctx context.Context) error
+	DeletePasswordResetTokensByUser(ctx context.Context, userID string) error
 	DeleteRefreshToken(ctx context.Context, arg DeleteRefreshTokenParams) error
 	DeleteRefreshTokenByDevice(ctx context.Context, arg DeleteRefreshTokenByDeviceParams) error
+	DeleteRefreshTokensByUser(ctx context.Context, userID string) error
+	GetPasswordResetToken(ctx context.Context, tokenHash string) (GetPasswordResetTokenRow, error)
 	GetPostByID(ctx context.Context, id string) (Post, error)
-	GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams) (RefreshToken, error)
+	GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams) (GetRefreshTokenRow, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	GetUserByID(ctx context.Context, id string) (GetUserByIDRow, error)
 	ListPublishedPost(ctx context.Context, arg ListPublishedPostParams) ([]Post, error)
+	MarkPasswordResetTokenUsed(ctx context.Context, tokenHash string) error
 	MarkUserVerified(ctx context.Context, id string) error
 	PublishPost(ctx context.Context, id string) error
+	StorePasswordResetToken(ctx context.Context, arg StorePasswordResetTokenParams) error
 	StoreRefreshToken(ctx context.Context, arg StoreRefreshTokenParams) error
+	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 }
 
 var _ Querier = (*Queries)(nil)
