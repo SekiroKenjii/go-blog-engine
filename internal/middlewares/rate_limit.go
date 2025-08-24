@@ -169,7 +169,6 @@ func RateLimitExcludingPaths(excludePaths ...string) gin.HandlerFunc {
 			}
 		}
 
-		// Use enhanced IP extraction
 		clientIP := utils.ExtractIPAddress(c.Request)
 		v := getVisitor(clientIP, c.Request.Method)
 

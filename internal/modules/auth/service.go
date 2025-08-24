@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SekiroKenjii/go-blog-engine/config"
 	"github.com/SekiroKenjii/go-blog-engine/internal/abstract"
 	"github.com/SekiroKenjii/go-blog-engine/internal/cache"
 	"github.com/SekiroKenjii/go-blog-engine/internal/db"
@@ -19,10 +18,10 @@ import (
 )
 
 type AuthService struct {
-	repo            *db.Repository
-	tokenMgr        ITokenManager
-	cacheSvc        abstract.ICacheService
-	strategicMailer *mailers.StrategicMailer
+	repo     *db.Repository
+	tokenMgr ITokenManager
+	cacheSvc abstract.ICacheService
+	mailer   *mailers.Mailer
 }
 
 const (
@@ -37,18 +36,17 @@ const (
 )
 
 func NewAuthService() IAuthService {
-	cfg := config.Instance()
-	factory := mailers.NewMailerFactory(cfg)
-	strategicMailer, _, err := factory.CreateStrategicMailerSystem()
-	if err != nil {
-		panic("Failed to create strategic mailer system: " + err.Error())
+	// Get the singleton mailer instance that was created during app bootstrap
+	mailer := mailers.GetMailerInstance()
+	if mailer == nil {
+		panic("Mailer system not initialized. Ensure app.Bootstrap() is called before creating auth service")
 	}
 
 	return &AuthService{
-		repo:            db.RepositoryInstance(),
-		tokenMgr:        TokenManagerInstance(),
-		cacheSvc:        cache.NewCacheService(),
-		strategicMailer: strategicMailer,
+		repo:     db.RepositoryInstance(),
+		tokenMgr: TokenManagerInstance(),
+		cacheSvc: cache.NewCacheService(),
+		mailer:   mailer,
 	}
 }
 
@@ -239,10 +237,10 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) response.Er
 	// Send welcome email after successful verification (async)
 	user, err := s.repo.GetUserByID(ctx, userID)
 	if err == nil {
-		params := map[string]interface{}{
+		params := map[string]any{
 			"firstName": user.FirstName,
 		}
-		_ = s.strategicMailer.SendEmailAsync(ctx, mailers.Strategies.Welcome(), user.Email, params)
+		_ = s.mailer.SendAsync(ctx, mailers.Strategies.Welcome(), user.Email, params)
 	}
 
 	return response.SBIZ000001
@@ -272,15 +270,17 @@ func (s *AuthService) SendVerificationEmail(ctx context.Context, email, userID s
 	}
 
 	// Send verification email (async)
-	params := map[string]interface{}{
+	params := map[string]any{
 		"token":     token,
 		"firstName": user.FirstName,
 	}
-	_ = s.strategicMailer.SendEmailAsync(ctx, mailers.Strategies.Verification(), user.Email, params)
+	_ = s.mailer.SendAsync(ctx, mailers.Strategies.Verification(), user.Email, params)
 	logger.Info(fmt.Sprintf("Verification email queued for sending to: %s", user.Email))
 
 	return response.SBIZ000001
-} // SendPasswordResetEmail implements IAuthService.
+}
+
+// SendPasswordResetEmail implements IAuthService.
 func (s *AuthService) SendPasswordResetEmail(ctx context.Context, email string) response.ErrorCode {
 	// First check if user exists
 	user, err := s.repo.GetUserByEmail(ctx, email)
@@ -317,12 +317,12 @@ func (s *AuthService) SendPasswordResetEmail(ctx context.Context, email string) 
 	}
 
 	// Send password reset email (async)
-	params := map[string]interface{}{
+	params := map[string]any{
 		"token":     token,
 		"firstName": user.FirstName,
 		"email":     user.Email,
 	}
-	_ = s.strategicMailer.SendEmailAsync(ctx, mailers.Strategies.PasswordReset(), user.Email, params)
+	_ = s.mailer.SendAsync(ctx, mailers.Strategies.PasswordReset(), user.Email, params)
 	logger.Info(fmt.Sprintf("Password reset email queued for sending to: %s", user.Email))
 
 	return response.SBIZ000001

@@ -2,8 +2,18 @@ package mailers
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/SekiroKenjii/go-blog-engine/config"
+
+	authStrategies "github.com/SekiroKenjii/go-blog-engine/internal/modules/mailers/strategies/auth"
+)
+
+var (
+	mailerInstance   *Mailer
+	workerInstance   *MailWorker
+	mailerOnce       sync.Once
+	mailerFactoryErr error
 )
 
 // MailerFactory creates and configures the mailer system with strategy pattern
@@ -15,21 +25,27 @@ func NewMailerFactory(config *config.Config) *MailerFactory {
 	return &MailerFactory{config: config}
 }
 
-// CreateStrategicMailerSystem creates a complete strategic mailer system
-func (f *MailerFactory) CreateStrategicMailerSystem() (*StrategicMailer, *StrategicEmailWorker, error) {
-	// Create template service
+// CreateMailerSystem creates a complete strategic mailer system using singleton pattern
+func (f *MailerFactory) CreateMailerSystem() (*Mailer, *MailWorker, error) {
+	mailerOnce.Do(func() {
+		mailerInstance, workerInstance, mailerFactoryErr = f.createMailerSystem()
+	})
+
+	return mailerInstance, workerInstance, mailerFactoryErr
+}
+
+// createMailerSystem is the internal method that actually creates the mailer system
+func (f *MailerFactory) createMailerSystem() (*Mailer, *MailWorker, error) {
 	templateSvc := NewTemplateService(f.config.Email.TemplateDir)
 
-	// Create strategic email worker with default values (since EmailWorker config doesn't exist)
-	emailWorker := NewStrategicEmailWorker(
-		nil, // Will be set later
+	mailWorker := NewMailWorker(
+		nil, // set later
 		5,   // Default worker count
 		100, // Default queue size
 		3,   // Default max retries
 	)
 
-	// Create strategic mailer config
-	mailerConfig := StrategicMailerConfig{
+	mailerConfig := MailerConfig{
 		SMTPHost:     f.config.Email.SMTPHost,
 		SMTPPort:     fmt.Sprintf("%d", f.config.Email.SMTPPort),
 		SMTPUser:     f.config.Email.Username,
@@ -38,30 +54,42 @@ func (f *MailerFactory) CreateStrategicMailerSystem() (*StrategicMailer, *Strate
 		FromName:     f.config.Email.FromName,
 	}
 
-	// Create strategic mailer
-	strategicMailer := NewStrategicMailer(mailerConfig, templateSvc, emailWorker)
+	mailer := NewMailer(mailerConfig, templateSvc, mailWorker)
 
-	// Set the mailer in the worker
-	emailWorker.mailer = strategicMailer
+	mailWorker.mailer = mailer
 
-	// Register auth strategies
-	f.registerAuthStrategies(strategicMailer)
+	f.registerAuthStrategies(mailer)
 
-	return strategicMailer, emailWorker, nil
+	return mailer, mailWorker, nil
+}
+
+// GetMailerInstance returns the singleton mailer instance
+// This method should be called after CreateStrategicMailerSystem has been called at least once
+func GetMailerInstance() *Mailer {
+	return mailerInstance
+}
+
+// GetWorkerInstance returns the singleton worker instance
+// This method should be called after CreateStrategicMailerSystem has been called at least once
+func GetWorkerInstance() *MailWorker {
+	return workerInstance
+}
+
+// ResetSingleton resets the singleton instances (useful for testing)
+func ResetSingleton() {
+	mailerOnce = sync.Once{}
+	mailerInstance = nil
+	workerInstance = nil
+	mailerFactoryErr = nil
 }
 
 // registerAuthStrategies registers all auth-related email strategies
-func (f *MailerFactory) registerAuthStrategies(mailer *StrategicMailer) {
+func (f *MailerFactory) registerAuthStrategies(mailer *Mailer) {
 	baseURL := f.getBaseURL()
 
-	// Register verification email strategy
-	mailer.RegisterStrategy("verification", NewVerificationEmailStrategy(baseURL))
-
-	// Register password reset email strategy
-	mailer.RegisterStrategy("password_reset", NewPasswordResetEmailStrategy(baseURL))
-
-	// Register welcome email strategy
-	mailer.RegisterStrategy("welcome", NewWelcomeEmailStrategy(baseURL))
+	mailer.RegisterStrategy(Strategies.PasswordReset(), authStrategies.NewPasswordResetEmailStrategy(baseURL))
+	mailer.RegisterStrategy(Strategies.Verification(), authStrategies.NewVerificationEmailStrategy(baseURL))
+	mailer.RegisterStrategy(Strategies.Welcome(), authStrategies.NewWelcomeEmailStrategy(baseURL))
 }
 
 // getBaseURL constructs the base URL from config
@@ -70,13 +98,3 @@ func (f *MailerFactory) getBaseURL() string {
 	port := fmt.Sprintf("%d", f.config.Server.Port)
 	return fmt.Sprintf("http://localhost:%s", port)
 }
-
-// StrategyNames provides constants for strategy names
-type StrategyNames struct{}
-
-func (StrategyNames) Verification() string  { return "verification" }
-func (StrategyNames) PasswordReset() string { return "password_reset" }
-func (StrategyNames) Welcome() string       { return "welcome" }
-
-// Strategies provides easy access to strategy names
-var Strategies = StrategyNames{}

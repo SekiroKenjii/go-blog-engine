@@ -2,8 +2,8 @@ package mailers
 
 import "context"
 
-// IEmailStrategy defines how different types of emails should be handled
-type IEmailStrategy interface {
+// IMailStrategy defines how different types of emails should be handled
+type IMailStrategy interface {
 	// GetTemplateName returns the template filename for this email type
 	GetTemplateName() string
 
@@ -18,13 +18,4 @@ type IEmailStrategy interface {
 
 	// Validate validates the required parameters for this email type
 	Validate(params map[string]any) error
-}
-
-// IEmailSender interface for sending emails using strategy pattern
-type IEmailSender interface {
-	// SendEmail sends an email synchronously using strategy name
-	SendEmail(ctx context.Context, strategyName string, toEmail string, params map[string]any) error
-
-	// SendEmailAsync sends an email asynchronously using strategy name
-	SendEmailAsync(ctx context.Context, strategyName string, toEmail string, params map[string]any) error
 }

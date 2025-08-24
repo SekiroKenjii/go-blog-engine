@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"net/smtp"
 	"strings"
+
+	strategies "github.com/SekiroKenjii/go-blog-engine/internal/modules/mailers/strategies"
 )
 
-// StrategicMailerConfig holds configuration for StrategicMailer
-type StrategicMailerConfig struct {
+type MailerConfig struct {
 	SMTPHost     string
 	SMTPPort     string
 	SMTPUser     string
@@ -17,34 +18,33 @@ type StrategicMailerConfig struct {
 	FromName     string
 }
 
-// StrategicMailer implements IEmailSender interface using strategy pattern
-type StrategicMailer struct {
-	config      StrategicMailerConfig
+type Mailer struct {
+	config      MailerConfig
 	templateSvc *TemplateService
-	emailWorker *StrategicEmailWorker
-	strategies  map[string]IEmailStrategy
+	mailWorker  *MailWorker
+	strategies  map[string]strategies.IMailStrategy
 }
 
-func NewStrategicMailer(
-	config StrategicMailerConfig,
+func NewMailer(
+	config MailerConfig,
 	templateSvc *TemplateService,
-	emailWorker *StrategicEmailWorker,
-) *StrategicMailer {
-	return &StrategicMailer{
+	mailWorker *MailWorker,
+) *Mailer {
+	return &Mailer{
 		config:      config,
 		templateSvc: templateSvc,
-		emailWorker: emailWorker,
-		strategies:  make(map[string]IEmailStrategy),
+		mailWorker:  mailWorker,
+		strategies:  make(map[string]strategies.IMailStrategy),
 	}
 }
 
 // RegisterStrategy registers an email strategy
-func (m *StrategicMailer) RegisterStrategy(name string, strategy IEmailStrategy) {
+func (m *Mailer) RegisterStrategy(name string, strategy strategies.IMailStrategy) {
 	m.strategies[name] = strategy
 }
 
-// SendEmail sends an email synchronously using the strategy pattern
-func (m *StrategicMailer) SendEmail(ctx context.Context, strategyName, toEmail string, params map[string]any) error {
+// Send sends an email synchronously
+func (m *Mailer) Send(ctx context.Context, strategyName, toEmail string, params map[string]any) error {
 	strategy, exists := m.strategies[strategyName]
 	if !exists {
 		return fmt.Errorf("email strategy '%s' not found", strategyName)
@@ -75,8 +75,8 @@ func (m *StrategicMailer) SendEmail(ctx context.Context, strategyName, toEmail s
 	return m.sendSMTP(toEmail, strategy.GetSubject(), htmlBody)
 }
 
-// SendEmailAsync sends an email asynchronously using the strategy pattern
-func (m *StrategicMailer) SendEmailAsync(ctx context.Context, strategyName, toEmail string, params map[string]any) error {
+// SendAsync sends an email asynchronously
+func (m *Mailer) SendAsync(ctx context.Context, strategyName, toEmail string, params map[string]any) error {
 	strategy, exists := m.strategies[strategyName]
 	if !exists {
 		return fmt.Errorf("email strategy '%s' not found", strategyName)
@@ -88,7 +88,7 @@ func (m *StrategicMailer) SendEmailAsync(ctx context.Context, strategyName, toEm
 	}
 
 	// Create email job
-	job := EmailJob{
+	job := MailJob{
 		ToEmail:      toEmail,
 		StrategyName: strategyName,
 		Params:       params,
@@ -96,7 +96,7 @@ func (m *StrategicMailer) SendEmailAsync(ctx context.Context, strategyName, toEm
 
 	// Send to worker
 	select {
-	case m.emailWorker.GetJobQueue() <- job:
+	case m.mailWorker.GetJobQueue() <- job:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
@@ -106,7 +106,7 @@ func (m *StrategicMailer) SendEmailAsync(ctx context.Context, strategyName, toEm
 }
 
 // sendSMTP handles the actual SMTP sending
-func (m *StrategicMailer) sendSMTP(toEmail, subject, htmlBody string) error {
+func (m *Mailer) sendSMTP(toEmail, subject, htmlBody string) error {
 	auth := smtp.PlainAuth("", m.config.SMTPUser, m.config.SMTPPassword, m.config.SMTPHost)
 
 	// Build message
@@ -118,7 +118,7 @@ func (m *StrategicMailer) sendSMTP(toEmail, subject, htmlBody string) error {
 }
 
 // buildMessage constructs the email message
-func (m *StrategicMailer) buildMessage(toEmail, subject, htmlBody string) string {
+func (m *Mailer) buildMessage(toEmail, subject, htmlBody string) string {
 	var message strings.Builder
 
 	message.WriteString(fmt.Sprintf("From: %s <%s>\r\n", m.config.FromName, m.config.FromEmail))
@@ -133,7 +133,7 @@ func (m *StrategicMailer) buildMessage(toEmail, subject, htmlBody string) string
 }
 
 // GetAvailableStrategies returns list of registered strategies
-func (m *StrategicMailer) GetAvailableStrategies() []string {
+func (m *Mailer) GetAvailableStrategies() []string {
 	strategies := make([]string, 0, len(m.strategies))
 	for name := range m.strategies {
 		strategies = append(strategies, name)

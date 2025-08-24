@@ -9,8 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// EmailJob represents an email job to be processed using strategy pattern
-type EmailJob struct {
+type MailJob struct {
 	ToEmail      string
 	StrategyName string
 	Params       map[string]any
@@ -18,32 +17,30 @@ type EmailJob struct {
 	CreatedAt    time.Time
 }
 
-// StrategicEmailWorker handles asynchronous email processing using strategy pattern
-type StrategicEmailWorker struct {
-	jobQueue    chan EmailJob
-	workerPool  chan chan EmailJob
+type MailWorker struct {
+	jobQueue    chan MailJob
+	workerPool  chan chan MailJob
 	quit        chan bool
 	wg          sync.WaitGroup
-	mailer      IEmailSender
+	mailer      IMailSender
 	workerCount int
 	maxRetries  int
 }
 
-// StrategicWorker represents an individual worker using strategy pattern
-type StrategicWorker struct {
+// Worker represents an individual worker using strategy pattern
+type Worker struct {
 	id         int
-	jobChannel chan EmailJob
-	workerPool chan chan EmailJob
+	jobChannel chan MailJob
+	workerPool chan chan MailJob
 	quit       chan bool
-	mailer     IEmailSender
+	mailer     IMailSender
 	maxRetries int
 }
 
-// NewStrategicEmailWorker creates a new strategic email worker
-func NewStrategicEmailWorker(mailer IEmailSender, workerCount, queueSize, maxRetries int) *StrategicEmailWorker {
-	return &StrategicEmailWorker{
-		jobQueue:    make(chan EmailJob, queueSize),
-		workerPool:  make(chan chan EmailJob, workerCount),
+func NewMailWorker(mailer IMailSender, workerCount, queueSize, maxRetries int) *MailWorker {
+	return &MailWorker{
+		jobQueue:    make(chan MailJob, queueSize),
+		workerPool:  make(chan chan MailJob, workerCount),
 		quit:        make(chan bool),
 		mailer:      mailer,
 		workerCount: workerCount,
@@ -51,14 +48,14 @@ func NewStrategicEmailWorker(mailer IEmailSender, workerCount, queueSize, maxRet
 	}
 }
 
-// Start starts the email worker
-func (ew *StrategicEmailWorker) Start() {
-	logger.Info("Starting strategic email worker", zap.Int("workers", ew.workerCount))
+// Start starts the mail worker
+func (ew *MailWorker) Start() {
+	logger.Info("Starting mail worker", zap.Int("workers", ew.workerCount))
 
 	for i := 1; i <= ew.workerCount; i++ {
-		worker := &StrategicWorker{
+		worker := &Worker{
 			id:         i,
-			jobChannel: make(chan EmailJob),
+			jobChannel: make(chan MailJob),
 			workerPool: ew.workerPool,
 			quit:       make(chan bool),
 			mailer:     ew.mailer,
@@ -71,21 +68,23 @@ func (ew *StrategicEmailWorker) Start() {
 	go ew.dispatch()
 }
 
-// Stop stops the email worker gracefully
-func (ew *StrategicEmailWorker) Stop() {
-	logger.Info("Stopping strategic email worker...")
+// Stop stops the mail worker gracefully
+func (ew *MailWorker) Stop() {
+	logger.Info("Stopping mail worker...")
+
 	close(ew.quit)
 	ew.wg.Wait()
-	logger.Info("Strategic email worker stopped")
+
+	logger.Info("Mail worker stopped")
 }
 
 // AddJob adds a job to the queue
-func (ew *StrategicEmailWorker) AddJob(job EmailJob) bool {
+func (ew *MailWorker) AddJob(job MailJob) bool {
 	select {
 	case ew.jobQueue <- job:
 		return true
 	default:
-		logger.Warn("Email job queue is full, job dropped",
+		logger.Warn("Mail job queue is full, job dropped",
 			zap.String("to", job.ToEmail),
 			zap.String("strategy", job.StrategyName))
 		return false
@@ -93,7 +92,7 @@ func (ew *StrategicEmailWorker) AddJob(job EmailJob) bool {
 }
 
 // dispatch dispatches jobs to available workers
-func (ew *StrategicEmailWorker) dispatch() {
+func (ew *MailWorker) dispatch() {
 	defer ew.wg.Done()
 
 	for {
@@ -123,7 +122,7 @@ func (ew *StrategicEmailWorker) dispatch() {
 }
 
 // start starts the individual worker
-func (w *StrategicWorker) start(wg *sync.WaitGroup) {
+func (w *Worker) start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -145,9 +144,9 @@ func (w *StrategicWorker) start(wg *sync.WaitGroup) {
 	}()
 }
 
-// processJob processes an individual email job
-func (w *StrategicWorker) processJob(job EmailJob) {
-	logger.Debug("Processing email job",
+// processJob processes an individual mail job
+func (w *Worker) processJob(job MailJob) {
+	logger.Debug("Processing mail job",
 		zap.Int("worker", w.id),
 		zap.String("to", job.ToEmail),
 		zap.String("strategy", job.StrategyName),
@@ -156,8 +155,7 @@ func (w *StrategicWorker) processJob(job EmailJob) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Send email using strategy pattern
-	err := w.mailer.SendEmail(ctx, job.StrategyName, job.ToEmail, job.Params)
+	err := w.mailer.Send(ctx, job.StrategyName, job.ToEmail, job.Params)
 
 	if err != nil {
 		logger.Error("Failed to send email",
@@ -178,17 +176,17 @@ func (w *StrategicWorker) processJob(job EmailJob) {
 			select {
 			case w.workerPool <- w.jobChannel:
 				w.jobChannel <- job
-				logger.Info("Retrying email job",
+				logger.Info("Retrying mail job",
 					zap.String("to", job.ToEmail),
 					zap.String("strategy", job.StrategyName),
 					zap.Int("attempts", job.Attempts))
 			default:
-				logger.Error("Failed to requeue email job - queue full",
+				logger.Error("Failed to requeue mail job - queue full",
 					zap.String("to", job.ToEmail),
 					zap.String("strategy", job.StrategyName))
 			}
 		} else {
-			logger.Error("Email job failed after maximum retries",
+			logger.Error("Mail job failed after maximum retries",
 				zap.String("to", job.ToEmail),
 				zap.String("strategy", job.StrategyName),
 				zap.Int("max_retries", w.maxRetries))
@@ -201,6 +199,6 @@ func (w *StrategicWorker) processJob(job EmailJob) {
 }
 
 // GetJobQueue returns the job queue (for external access)
-func (ew *StrategicEmailWorker) GetJobQueue() chan<- EmailJob {
+func (ew *MailWorker) GetJobQueue() chan<- MailJob {
 	return ew.jobQueue
 }

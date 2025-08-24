@@ -48,7 +48,6 @@ func (r *Router) Configure() {
 func (r *Router) addMiddlewares() {
 	r.engine.Use(middlewares.ErrorHandler())
 	r.engine.Use(middlewares.Cors())
-	// Apply rate limiting to all routes except auth routes (which have their own stricter rate limiting)
 	r.engine.Use(middlewares.RateLimitExcludingPaths("/api/v1/auth"))
 }
 

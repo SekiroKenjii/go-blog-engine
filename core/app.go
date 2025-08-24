@@ -18,10 +18,10 @@ import (
 )
 
 type Application struct {
-	config      *config.Config
-	redis       *redis.Client
-	router      abstract.IRouter
-	emailWorker *mailers.StrategicEmailWorker
+	config     *config.Config
+	redis      *redis.Client
+	router     abstract.IRouter
+	mailWorker *mailers.MailWorker
 }
 
 // Bootstrap initializes the application components such as configuration, Redis cache, and router.
@@ -32,24 +32,22 @@ func Bootstrap() *Application {
 	redis := cache.RedisInstance()
 	router := router.NewRouter()
 
-	// Initialize strategic email worker with configuration
 	factory := mailers.NewMailerFactory(cfg)
-	_, emailWorker, err := factory.CreateStrategicMailerSystem()
+	_, mailWorker, err := factory.CreateMailerSystem()
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to initialize strategic email worker: %v", err))
-		panic("Failed to initialize strategic email worker: " + err.Error())
+		logger.Error(fmt.Sprintf("Failed to initialize mail worker: %v", err))
+		panic("Failed to initialize mail worker: " + err.Error())
 	}
 
-	// Start email worker
-	emailWorker.Start()
+	mailWorker.Start()
 
 	logger.Info("Application startup complete.")
 
 	return &Application{
-		config:      cfg,
-		redis:       redis,
-		router:      router,
-		emailWorker: emailWorker,
+		config:     cfg,
+		redis:      redis,
+		router:     router,
+		mailWorker: mailWorker,
 	}
 }
 
@@ -92,10 +90,9 @@ func (a *Application) Shutdown(httpSrv *http.Server, done chan bool) {
 
 	logger.Info("Shutting down Server...")
 
-	// Stop email worker first
-	if a.emailWorker != nil {
-		logger.Info("Stopping email worker...")
-		a.emailWorker.Stop()
+	if a.mailWorker != nil {
+		logger.Info("Stopping mail worker...")
+		a.mailWorker.Stop()
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
