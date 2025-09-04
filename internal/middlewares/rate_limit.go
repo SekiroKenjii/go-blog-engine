@@ -87,7 +87,6 @@ func startCleanup(ctx context.Context, ttl, interval time.Duration) {
 
 // RateLimitWithConfig creates a rate limiter with custom configuration
 func RateLimitWithConfig(requestsPerSecond float64, burstSize int) gin.HandlerFunc {
-	logger := logger.Instance()
 	visitors := make(map[string]*visitor)
 	visitorsMux := sync.Mutex{}
 	ctx := context.Background()
@@ -151,7 +150,6 @@ func AuthRateLimit() gin.HandlerFunc {
 
 // RateLimitExcludingPaths creates a rate limiter that excludes specific path prefixes
 func RateLimitExcludingPaths(excludePaths ...string) gin.HandlerFunc {
-	logger := logger.Instance()
 	ctx := context.Background()
 
 	// Clean up visitors every minute

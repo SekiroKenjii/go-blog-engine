@@ -99,13 +99,13 @@ func (m *MailService) SendAsync(ctx context.Context, strategyName, toEmail strin
 
 // sendSMTP handles the actual SMTP sending
 func (m *MailService) sendSMTP(toEmail, subject, htmlBody string) error {
-	auth := smtp.PlainAuth("", m.config.SMTPUser, m.config.SMTPPassword, m.config.SMTPHost)
+	auth := smtp.PlainAuth("", m.config.Username, m.config.Password, m.config.SMTPHost)
 
 	// Build message
 	message := m.buildMessage(toEmail, subject, htmlBody)
 
 	// Send email
-	addr := fmt.Sprintf("%s:%s", m.config.SMTPHost, m.config.SMTPPort)
+	addr := fmt.Sprintf("%s:%d", m.config.SMTPHost, m.config.SMTPPort)
 	return smtp.SendMail(addr, auth, m.config.FromEmail, []string{toEmail}, []byte(message))
 }
 

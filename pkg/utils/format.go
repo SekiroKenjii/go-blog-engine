@@ -21,7 +21,7 @@ func FormatFieldError(format string, f validator.FieldError) string {
 
 // extractPlaceholders finds all placeholders in the input string
 func extractPlaceholders(input string) []string {
-	re := regexp.MustCompile(`__[^_]+__`)
+	re := regexp.MustCompile(`__[A-Z_]+__`)
 
 	return re.FindAllString(input, -1)
 }

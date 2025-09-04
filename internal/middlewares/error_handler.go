@@ -10,8 +10,6 @@ import (
 )
 
 func ErrorHandler() gin.HandlerFunc {
-	logger := logger.Instance()
-
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {

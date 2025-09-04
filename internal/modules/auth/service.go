@@ -21,7 +21,7 @@ type AuthService struct {
 	repo     *db.Repository
 	tokenMgr ITokenManager
 	cacheSvc abstract.ICacheService
-	mailSvc  *mailers.MailService
+	mailSvc  mailers.IMailService
 }
 
 const (

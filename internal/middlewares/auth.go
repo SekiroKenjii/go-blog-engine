@@ -10,8 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const BearerPrefix = "Bearer "
-
 // RequireAuth creates a middleware that requires valid JWT authentication
 func RequireAuth() gin.HandlerFunc {
 	tokenConfig := config.Instance().Security.Jwt
@@ -27,7 +25,7 @@ func RequireAuth() gin.HandlerFunc {
 		}
 
 		// Check if the header starts with "Bearer "
-		if !strings.HasPrefix(authHeader, BearerPrefix) {
+		if !strings.HasPrefix(authHeader, string(jwt.DefaultAuthScheme)) {
 			response.Failure(c, http.StatusUnauthorized, response.EBIZ001002, []*response.ErrorInner{
 				{Code: string(response.EBIZ001002), Source: "Invalid authorization format"},
 			}, nil)
@@ -36,7 +34,7 @@ func RequireAuth() gin.HandlerFunc {
 		}
 
 		// Extract token
-		token := strings.TrimPrefix(authHeader, BearerPrefix)
+		token := strings.TrimPrefix(authHeader, string(jwt.DefaultAuthScheme))
 		if token == "" {
 			response.Failure(c, http.StatusUnauthorized, response.EBIZ001002, []*response.ErrorInner{
 				{Code: string(response.EBIZ001002), Source: "Token is required"},

@@ -32,7 +32,7 @@ func Bootstrap() *Application {
 	redis := cache.RedisInstance()
 	router := router.NewRouter()
 
-	factory := mailers.NewMailerFactory(cfg)
+	factory := mailers.NewMailerFactory(cfg.Email)
 	_, mailWorker, err := factory.CreateMailerSystem()
 	if err != nil {
 		logger.Error(fmt.Sprintf("Failed to initialize mail worker: %v", err))

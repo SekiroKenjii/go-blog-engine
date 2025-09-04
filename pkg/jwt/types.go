@@ -5,8 +5,9 @@ import "github.com/golang-jwt/jwt/v5"
 type TokenType string
 
 const (
-	AccessToken  TokenType = "access"
-	RefreshToken TokenType = "refresh"
+	AccessToken       TokenType = "access"
+	RefreshToken      TokenType = "refresh"
+	DefaultAuthScheme TokenType = "Bearer"
 )
 
 // CustomClaims defines the structure of the JWT claims used in the application.
