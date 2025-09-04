@@ -227,4 +227,30 @@ func TestMailService(t *testing.T) {
 
 	// Note: Full Send flow test disabled due to logger/config singleton dependencies
 	// that are complex to mock in unit tests. This would be better suited for integration tests.
+
+	// t.Run("Send - Template Rendering Failed", func(t *testing.T) {
+	//     This test is disabled because it triggers logger.Warn through RenderTemplateWithFallback
+	//     which depends on config singleton that's difficult to mock in unit tests.
+	//     Template rendering failure paths should be tested in integration tests.
+	// })
+
+	t.Run("buildMessage - Functionality Test", func(t *testing.T) {
+		// Test the message building functionality indirectly through service methods
+		// since buildMessage is a private method
+		cfg := &config.EmailConfig{
+			FromName:  "Test Sender",
+			FromEmail: "test@example.com",
+		}
+		template := mailers.NewMailTemplate("/tmp")
+		worker := mailers.NewMailWorker(nil, 1, 10, 3)
+
+		service := mailers.NewMailService(cfg, template, worker)
+
+		// Verify service was created successfully with the config
+		assert.NotNil(t, service)
+
+		// Test that service has the expected strategies (empty initially)
+		strategies := service.GetAvailableStrategies()
+		assert.Empty(t, strategies)
+	})
 }

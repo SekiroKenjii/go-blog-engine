@@ -178,12 +178,20 @@ func TestMailTemplate(t *testing.T) {
 		assert.NotContains(t, result, "Fallback")
 	})
 
-	// Note: RenderTemplateWithFallback test that uses fallback is skipped
-	// because it triggers logger.Warn which requires config singleton
-	// This would require integration testing environment
+	// The following tests are commented out because they trigger logger.Warn
+	// which depends on config singleton, making them unsuitable for unit tests
 
-	// Note: Other RenderTemplateWithFallback tests are skipped because they
-	// trigger logger.Warn which requires config singleton
+	// t.Run("RenderTemplateWithFallback - Primary Template Fails, Use Fallback", func(t *testing.T) {
+	//     This test triggers logger.Warn when primary template fails
+	//     Should be tested in integration tests
+	// })
+
+	// t.Run("RenderTemplateWithFallback - Both Primary and Fallback Fail Parse", func(t *testing.T) {
+	//     This test triggers logger.Warn when primary template fails
+	//     Should be tested in integration tests
+	// })
+
+	// Note: Other fallback failure tests are disabled due to logger dependency
 
 	t.Run("RenderTemplate - Empty Data", func(t *testing.T) {
 		template := mailers.NewMailTemplate(tempDir)
@@ -232,5 +240,63 @@ func TestMailTemplate(t *testing.T) {
 		assert.Contains(t, result, helloJohnDoe)
 		assert.Contains(t, result, "theme: dark")
 		assert.Contains(t, result, "language: en")
+	})
+
+	t.Run("RenderTemplateWithFallback - Successful Primary Template", func(t *testing.T) {
+		template := mailers.NewMailTemplate(tempDir)
+
+		data := map[string]interface{}{
+			"Name":  testName,
+			"Email": testEmail,
+		}
+
+		fallback := "Fallback: Hello {{.Name}}"
+
+		// Test with existing template - should use primary, not fallback
+		result, err := template.RenderTemplateWithFallback(testTemplateName, data, fallback)
+		assert.NoError(t, err)
+		assert.Contains(t, result, helloJohnDoe)
+		assert.Contains(t, result, testEmail)
+		assert.NotContains(t, result, "Fallback")
+	})
+
+	t.Run("RenderTemplateWithFallback - Multiple Success Cases", func(t *testing.T) {
+		template := mailers.NewMailTemplate(tempDir)
+
+		tests := []struct {
+			name     string
+			data     map[string]interface{}
+			fallback string
+		}{
+			{
+				name: "With email data",
+				data: map[string]interface{}{
+					"Name":  testName,
+					"Email": testEmail,
+				},
+				fallback: "Fallback: {{.Name}}",
+			},
+			{
+				name: "With minimal data",
+				data: map[string]interface{}{
+					"Name": "Jane",
+				},
+				fallback: "Fallback: {{.Name}}",
+			},
+			{
+				name:     "With empty data",
+				data:     map[string]interface{}{},
+				fallback: "Fallback: No data",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result, err := template.RenderTemplateWithFallback(testTemplateName, tt.data, tt.fallback)
+				assert.NoError(t, err)
+				assert.NotEmpty(t, result)
+				assert.NotContains(t, result, "Fallback")
+			})
+		}
 	})
 }

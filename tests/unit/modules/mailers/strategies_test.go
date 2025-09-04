@@ -10,19 +10,22 @@ import (
 )
 
 const (
-	testFirstNamePlaceholder = "{{.FirstName}}"
-	prepareDataSuccessTest   = "PrepareData - Success"
-	validateSuccessTest      = "Validate - Success"
-	testToken123             = "test-token-123"
-	testFirstNameJohn        = "John"
-	testEmailJohn            = "john@example.com"
-	testBaseURL              = "https://example.com"
-	firstNameRequiredError   = "firstName is required"
-	verifyToken456           = "verify-token-456"
-	testFirstNameJane        = "Jane"
-	testEmailJane            = "jane@example.com"
-	testFirstNameBob         = "Bob"
-	testEmailBob             = "bob@example.com"
+	testFirstNamePlaceholder    = "{{.FirstName}}"
+	prepareDataSuccessTest      = "PrepareData - Success"
+	validateSuccessTest         = "Validate - Success"
+	prepareDataMissingFirstName = "PrepareData - Missing FirstName"
+	tokenParameterRequired      = "token parameter is required"
+	firstNameParameterRequired  = "firstName parameter is required"
+	testToken123                = "test-token-123"
+	testFirstNameJohn           = "John"
+	testEmailJohn               = "john@example.com"
+	testBaseURL                 = "https://example.com"
+	firstNameRequiredError      = "firstName is required"
+	verifyToken456              = "verify-token-456"
+	testFirstNameJane           = "Jane"
+	testEmailJane               = "jane@example.com"
+	testFirstNameBob            = "Bob"
+	testEmailBob                = "bob@example.com"
 )
 
 func TestPasswordResetEmailStrategy(t *testing.T) {
@@ -82,7 +85,7 @@ func TestPasswordResetEmailStrategy(t *testing.T) {
 		assert.Contains(t, err.Error(), "token is required")
 	})
 
-	t.Run("PrepareData - Missing FirstName", func(t *testing.T) {
+	t.Run(prepareDataMissingFirstName, func(t *testing.T) {
 		strategy := authStrategies.NewPasswordResetEmailStrategy(testBaseURL)
 
 		params := map[string]any{
@@ -132,12 +135,12 @@ func TestPasswordResetEmailStrategy(t *testing.T) {
 			{
 				name:     "Missing Token",
 				params:   map[string]any{"firstName": "John", "email": testEmailJohn},
-				errorMsg: "token parameter is required",
+				errorMsg: tokenParameterRequired,
 			},
 			{
 				name:     "Missing FirstName",
 				params:   map[string]any{"token": "token123", "email": testEmailJohn},
-				errorMsg: "firstName parameter is required",
+				errorMsg: firstNameParameterRequired,
 			},
 			{
 				name:     "Missing Email",
@@ -199,6 +202,56 @@ func TestVerificationEmailStrategy(t *testing.T) {
 		assert.Equal(t, testBaseURL, data["BaseURL"])
 	})
 
+	t.Run("PrepareData - Missing Token", func(t *testing.T) {
+		strategy := authStrategies.NewVerificationEmailStrategy(testBaseURL)
+
+		params := map[string]any{
+			"firstName": testFirstNameJane,
+		}
+
+		_, err := strategy.PrepareData(context.Background(), params)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "token is required for verification email")
+	})
+
+	t.Run(prepareDataMissingFirstName, func(t *testing.T) {
+		strategy := authStrategies.NewVerificationEmailStrategy(testBaseURL)
+
+		params := map[string]any{
+			"token": verifyToken456,
+		}
+
+		_, err := strategy.PrepareData(context.Background(), params)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), firstNameRequiredError)
+	})
+
+	t.Run("PrepareData - Invalid Token Type", func(t *testing.T) {
+		strategy := authStrategies.NewVerificationEmailStrategy(testBaseURL)
+
+		params := map[string]any{
+			"token":     123, // Invalid type
+			"firstName": testFirstNameJane,
+		}
+
+		_, err := strategy.PrepareData(context.Background(), params)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "token is required for verification email")
+	})
+
+	t.Run("PrepareData - Invalid FirstName Type", func(t *testing.T) {
+		strategy := authStrategies.NewVerificationEmailStrategy(testBaseURL)
+
+		params := map[string]any{
+			"token":     verifyToken456,
+			"firstName": 456, // Invalid type
+		}
+
+		_, err := strategy.PrepareData(context.Background(), params)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), firstNameRequiredError)
+	})
+
 	t.Run(validateSuccessTest, func(t *testing.T) {
 		strategy := authStrategies.NewVerificationEmailStrategy(testBaseURL)
 
@@ -210,6 +263,38 @@ func TestVerificationEmailStrategy(t *testing.T) {
 
 		err := strategy.Validate(params)
 		assert.NoError(t, err)
+	})
+
+	t.Run("Validate - Missing Token", func(t *testing.T) {
+		strategy := authStrategies.NewVerificationEmailStrategy(testBaseURL)
+
+		params := map[string]any{
+			"firstName": testFirstNameJane,
+		}
+
+		err := strategy.Validate(params)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), tokenParameterRequired)
+	})
+
+	t.Run("Validate - Missing FirstName", func(t *testing.T) {
+		strategy := authStrategies.NewVerificationEmailStrategy(testBaseURL)
+
+		params := map[string]any{
+			"token": verifyToken456,
+		}
+
+		err := strategy.Validate(params)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), firstNameParameterRequired)
+	})
+
+	t.Run("Validate - Empty Parameters", func(t *testing.T) {
+		strategy := authStrategies.NewVerificationEmailStrategy(testBaseURL)
+
+		err := strategy.Validate(map[string]any{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), tokenParameterRequired)
 	})
 }
 
