@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	mailerInstance   *Mailer
+	mailSvcInstance  IMailService
 	workerInstance   *MailWorker
 	mailerOnce       sync.Once
 	mailerFactoryErr error
@@ -18,55 +18,46 @@ var (
 
 // MailerFactory creates and configures the mailer system with strategy pattern
 type MailerFactory struct {
-	config *config.Config
+	config *config.EmailConfig
 }
 
-func NewMailerFactory(config *config.Config) *MailerFactory {
+func NewMailerFactory(config *config.EmailConfig) *MailerFactory {
 	return &MailerFactory{config: config}
 }
 
 // CreateMailerSystem creates a complete strategic mailer system using singleton pattern
-func (f *MailerFactory) CreateMailerSystem() (*Mailer, *MailWorker, error) {
+func (f *MailerFactory) CreateMailerSystem() (IMailService, *MailWorker, error) {
 	mailerOnce.Do(func() {
-		mailerInstance, workerInstance, mailerFactoryErr = f.createMailerSystem()
+		mailSvcInstance, workerInstance, mailerFactoryErr = f.createMailerSystem()
 	})
 
-	return mailerInstance, workerInstance, mailerFactoryErr
+	return mailSvcInstance, workerInstance, mailerFactoryErr
 }
 
 // createMailerSystem is the internal method that actually creates the mailer system
-func (f *MailerFactory) createMailerSystem() (*Mailer, *MailWorker, error) {
-	templateSvc := NewTemplateService(f.config.Email.TemplateDir)
+func (f *MailerFactory) createMailerSystem() (IMailService, *MailWorker, error) {
+	template := NewMailTemplate(f.config.TemplateDir)
 
 	mailWorker := NewMailWorker(
 		nil, // set later
-		5,   // Default worker count
-		100, // Default queue size
-		3,   // Default max retries
+		f.config.Worker.WorkerCount,
+		f.config.Worker.QueueSize,
+		f.config.Worker.MaxRetries,
 	)
 
-	mailerConfig := MailerConfig{
-		SMTPHost:     f.config.Email.SMTPHost,
-		SMTPPort:     fmt.Sprintf("%d", f.config.Email.SMTPPort),
-		SMTPUser:     f.config.Email.Username,
-		SMTPPassword: f.config.Email.Password,
-		FromEmail:    f.config.Email.FromEmail,
-		FromName:     f.config.Email.FromName,
-	}
+	mailSvc := NewMailService(f.config, template, mailWorker)
 
-	mailer := NewMailer(mailerConfig, templateSvc, mailWorker)
+	mailWorker.sender = mailSvc
 
-	mailWorker.mailer = mailer
+	f.registerAuthStrategies(mailSvc)
 
-	f.registerAuthStrategies(mailer)
-
-	return mailer, mailWorker, nil
+	return mailSvc, mailWorker, nil
 }
 
-// GetMailerInstance returns the singleton mailer instance
+// GetMailServiceInstance returns the singleton mail service instance
 // This method should be called after CreateStrategicMailerSystem has been called at least once
-func GetMailerInstance() *Mailer {
-	return mailerInstance
+func GetMailServiceInstance() IMailService {
+	return mailSvcInstance
 }
 
 // GetWorkerInstance returns the singleton worker instance
@@ -78,23 +69,21 @@ func GetWorkerInstance() *MailWorker {
 // ResetSingleton resets the singleton instances (useful for testing)
 func ResetSingleton() {
 	mailerOnce = sync.Once{}
-	mailerInstance = nil
+	mailSvcInstance = nil
 	workerInstance = nil
 	mailerFactoryErr = nil
 }
 
 // registerAuthStrategies registers all auth-related email strategies
-func (f *MailerFactory) registerAuthStrategies(mailer *Mailer) {
+func (f *MailerFactory) registerAuthStrategies(mailSvc IMailService) {
 	baseURL := f.getBaseURL()
 
-	mailer.RegisterStrategy(Strategies.PasswordReset(), authStrategies.NewPasswordResetEmailStrategy(baseURL))
-	mailer.RegisterStrategy(Strategies.Verification(), authStrategies.NewVerificationEmailStrategy(baseURL))
-	mailer.RegisterStrategy(Strategies.Welcome(), authStrategies.NewWelcomeEmailStrategy(baseURL))
+	mailSvc.RegisterStrategy(Strategies.PasswordReset(), authStrategies.NewPasswordResetEmailStrategy(baseURL))
+	mailSvc.RegisterStrategy(Strategies.Verification(), authStrategies.NewVerificationEmailStrategy(baseURL))
+	mailSvc.RegisterStrategy(Strategies.Welcome(), authStrategies.NewWelcomeEmailStrategy(baseURL))
 }
 
 // getBaseURL constructs the base URL from config
 func (f *MailerFactory) getBaseURL() string {
-	// Use default localhost for development
-	port := fmt.Sprintf("%d", f.config.Server.Port)
-	return fmt.Sprintf("http://localhost:%s", port)
+	return fmt.Sprintf("https://%s:%d", f.config.SMTPHost, f.config.SMTPPort)
 }

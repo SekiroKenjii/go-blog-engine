@@ -62,14 +62,21 @@ type RabbitMQConfig struct {
 	Password string `mapstructure:"password"`
 }
 
+type EmailWorkerConfig struct {
+	WorkerCount int `mapstructure:"worker_count"`
+	QueueSize   int `mapstructure:"queue_size"`
+	MaxRetries  int `mapstructure:"max_retries"`
+}
+
 type EmailConfig struct {
-	SMTPHost    string `mapstructure:"smtp_host"`
-	SMTPPort    int    `mapstructure:"smtp_port"`
-	Username    string `mapstructure:"username"`
-	Password    string `mapstructure:"password"`
-	FromEmail   string `mapstructure:"from_email"`
-	FromName    string `mapstructure:"from_name"`
-	TemplateDir string `mapstructure:"template_dir"`
+	SMTPHost    string            `mapstructure:"smtp_host"`
+	SMTPPort    int               `mapstructure:"smtp_port"`
+	Username    string            `mapstructure:"username"`
+	Password    string            `mapstructure:"password"`
+	FromEmail   string            `mapstructure:"from_email"`
+	FromName    string            `mapstructure:"from_name"`
+	TemplateDir string            `mapstructure:"template_dir"`
+	Worker      EmailWorkerConfig `mapstructure:"worker"`
 }
 
 // #endregion

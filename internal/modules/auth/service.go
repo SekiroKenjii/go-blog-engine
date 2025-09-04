@@ -21,7 +21,7 @@ type AuthService struct {
 	repo     *db.Repository
 	tokenMgr ITokenManager
 	cacheSvc abstract.ICacheService
-	mailer   *mailers.Mailer
+	mailSvc  *mailers.MailService
 }
 
 const (
@@ -36,9 +36,9 @@ const (
 )
 
 func NewAuthService() IAuthService {
-	// Get the singleton mailer instance that was created during app bootstrap
-	mailer := mailers.GetMailerInstance()
-	if mailer == nil {
+	// Get the singleton mailSvc instance that was created during app bootstrap
+	mailSvc := mailers.GetMailServiceInstance()
+	if mailSvc == nil {
 		panic("Mailer system not initialized. Ensure app.Bootstrap() is called before creating auth service")
 	}
 
@@ -46,7 +46,7 @@ func NewAuthService() IAuthService {
 		repo:     db.RepositoryInstance(),
 		tokenMgr: TokenManagerInstance(),
 		cacheSvc: cache.NewCacheService(),
-		mailer:   mailer,
+		mailSvc:  mailSvc,
 	}
 }
 
@@ -240,7 +240,7 @@ func (s *AuthService) VerifyEmail(ctx context.Context, token string) response.Er
 		params := map[string]any{
 			"firstName": user.FirstName,
 		}
-		_ = s.mailer.SendAsync(ctx, mailers.Strategies.Welcome(), user.Email, params)
+		_ = s.mailSvc.SendAsync(ctx, mailers.Strategies.Welcome(), user.Email, params)
 	}
 
 	return response.SBIZ000001
@@ -274,7 +274,7 @@ func (s *AuthService) SendVerificationEmail(ctx context.Context, email, userID s
 		"token":     token,
 		"firstName": user.FirstName,
 	}
-	_ = s.mailer.SendAsync(ctx, mailers.Strategies.Verification(), user.Email, params)
+	_ = s.mailSvc.SendAsync(ctx, mailers.Strategies.Verification(), user.Email, params)
 	logger.Info(fmt.Sprintf("Verification email queued for sending to: %s", user.Email))
 
 	return response.SBIZ000001
@@ -322,7 +322,7 @@ func (s *AuthService) SendPasswordResetEmail(ctx context.Context, email string) 
 		"firstName": user.FirstName,
 		"email":     user.Email,
 	}
-	_ = s.mailer.SendAsync(ctx, mailers.Strategies.PasswordReset(), user.Email, params)
+	_ = s.mailSvc.SendAsync(ctx, mailers.Strategies.PasswordReset(), user.Email, params)
 	logger.Info(fmt.Sprintf("Password reset email queued for sending to: %s", user.Email))
 
 	return response.SBIZ000001

@@ -6,45 +6,37 @@ import (
 	"net/smtp"
 	"strings"
 
+	"github.com/SekiroKenjii/go-blog-engine/config"
 	strategies "github.com/SekiroKenjii/go-blog-engine/internal/modules/mailers/strategies"
 )
 
-type MailerConfig struct {
-	SMTPHost     string
-	SMTPPort     string
-	SMTPUser     string
-	SMTPPassword string
-	FromEmail    string
-	FromName     string
+type MailService struct {
+	config     *config.EmailConfig
+	template   *MailTemplate
+	mailWorker *MailWorker
+	strategies map[string]strategies.IMailStrategy
 }
 
-type Mailer struct {
-	config      MailerConfig
-	templateSvc *TemplateService
-	mailWorker  *MailWorker
-	strategies  map[string]strategies.IMailStrategy
-}
-
-func NewMailer(
-	config MailerConfig,
-	templateSvc *TemplateService,
+func NewMailService(
+	config *config.EmailConfig,
+	template *MailTemplate,
 	mailWorker *MailWorker,
-) *Mailer {
-	return &Mailer{
-		config:      config,
-		templateSvc: templateSvc,
-		mailWorker:  mailWorker,
-		strategies:  make(map[string]strategies.IMailStrategy),
+) IMailService {
+	return &MailService{
+		config:     config,
+		template:   template,
+		mailWorker: mailWorker,
+		strategies: make(map[string]strategies.IMailStrategy),
 	}
 }
 
 // RegisterStrategy registers an email strategy
-func (m *Mailer) RegisterStrategy(name string, strategy strategies.IMailStrategy) {
+func (m *MailService) RegisterStrategy(name string, strategy strategies.IMailStrategy) {
 	m.strategies[name] = strategy
 }
 
 // Send sends an email synchronously
-func (m *Mailer) Send(ctx context.Context, strategyName, toEmail string, params map[string]any) error {
+func (m *MailService) Send(ctx context.Context, strategyName, toEmail string, params map[string]any) error {
 	strategy, exists := m.strategies[strategyName]
 	if !exists {
 		return fmt.Errorf("email strategy '%s' not found", strategyName)
@@ -62,7 +54,7 @@ func (m *Mailer) Send(ctx context.Context, strategyName, toEmail string, params 
 	}
 
 	// Render email content
-	htmlBody, err := m.templateSvc.RenderTemplateWithFallback(
+	htmlBody, err := m.template.RenderTemplateWithFallback(
 		strategy.GetTemplateName(),
 		templateData,
 		strategy.GetFallbackTemplate(),
@@ -76,7 +68,7 @@ func (m *Mailer) Send(ctx context.Context, strategyName, toEmail string, params 
 }
 
 // SendAsync sends an email asynchronously
-func (m *Mailer) SendAsync(ctx context.Context, strategyName, toEmail string, params map[string]any) error {
+func (m *MailService) SendAsync(ctx context.Context, strategyName, toEmail string, params map[string]any) error {
 	strategy, exists := m.strategies[strategyName]
 	if !exists {
 		return fmt.Errorf("email strategy '%s' not found", strategyName)
@@ -106,7 +98,7 @@ func (m *Mailer) SendAsync(ctx context.Context, strategyName, toEmail string, pa
 }
 
 // sendSMTP handles the actual SMTP sending
-func (m *Mailer) sendSMTP(toEmail, subject, htmlBody string) error {
+func (m *MailService) sendSMTP(toEmail, subject, htmlBody string) error {
 	auth := smtp.PlainAuth("", m.config.SMTPUser, m.config.SMTPPassword, m.config.SMTPHost)
 
 	// Build message
@@ -118,7 +110,7 @@ func (m *Mailer) sendSMTP(toEmail, subject, htmlBody string) error {
 }
 
 // buildMessage constructs the email message
-func (m *Mailer) buildMessage(toEmail, subject, htmlBody string) string {
+func (m *MailService) buildMessage(toEmail, subject, htmlBody string) string {
 	var message strings.Builder
 
 	message.WriteString(fmt.Sprintf("From: %s <%s>\r\n", m.config.FromName, m.config.FromEmail))
@@ -133,10 +125,11 @@ func (m *Mailer) buildMessage(toEmail, subject, htmlBody string) string {
 }
 
 // GetAvailableStrategies returns list of registered strategies
-func (m *Mailer) GetAvailableStrategies() []string {
+func (m *MailService) GetAvailableStrategies() []string {
 	strategies := make([]string, 0, len(m.strategies))
 	for name := range m.strategies {
 		strategies = append(strategies, name)
 	}
+
 	return strategies
 }

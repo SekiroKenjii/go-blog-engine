@@ -9,20 +9,20 @@ import (
 	"github.com/SekiroKenjii/go-blog-engine/pkg/logger"
 )
 
-// TemplateService handles email template rendering
-type TemplateService struct {
+// MailTemplate handles email template rendering
+type MailTemplate struct {
 	templateDir string
 }
 
-// NewTemplateService creates a new template service
-func NewTemplateService(templateDir string) *TemplateService {
-	return &TemplateService{
+// NewMailTemplate creates a new template service
+func NewMailTemplate(templateDir string) *MailTemplate {
+	return &MailTemplate{
 		templateDir: templateDir,
 	}
 }
 
 // RenderTemplate renders an email template with the given data
-func (ts *TemplateService) RenderTemplate(templateName string, data any) (string, error) {
+func (ts *MailTemplate) RenderTemplate(templateName string, data any) (string, error) {
 	templatePath := filepath.Join(ts.templateDir, templateName)
 
 	// First, try to parse the template file
@@ -41,7 +41,7 @@ func (ts *TemplateService) RenderTemplate(templateName string, data any) (string
 }
 
 // RenderTemplateWithFallback renders a template with a fallback option
-func (ts *TemplateService) RenderTemplateWithFallback(templateName string, data any, fallbackTemplate string) (string, error) {
+func (ts *MailTemplate) RenderTemplateWithFallback(templateName string, data any, fallbackTemplate string) (string, error) {
 	// Try to render the primary template
 	body, err := ts.RenderTemplate(templateName, data)
 	if err != nil {

@@ -47,3 +47,7 @@ email:
   from_email:
   from_name:
   template_dir:
+  worker:
+    worker_count:
+    queue_size:
+    max_retries:
